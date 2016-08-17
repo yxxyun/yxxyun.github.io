@@ -577,7 +577,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
                     return;
                 }
 
-                $scope.accountLinesStatus = 'Updated @ ledger:' + res.ledger_index;
+                $scope.accountLinesStatus = 'Updated';
 
                 $scope.trustlines = LINES;
                 $scope.linesStats();
