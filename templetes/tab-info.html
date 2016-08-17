@@ -1,29 +1,18 @@
 <div id="tabInfo">
     <div class="card" style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;">
         <h4 class="card-title">{{ 'Account' | translate }} {{activeAccount ? activeAccount : "-"}}</h4>
-        <button class="btn btn-warning" ng-click="accountInfo()" ng-disabled="!activeAccount">{{ 'Refresh' | translate }}</button> <br>{{accountInfoStatus}}<br>
+        <button class="btn btn-warning" ng-click="accountInfo();accountLines(); search.currency='';" ng-disabled="!activeAccount">{{ 'Refresh' | translate }}</button> <br>{{accountInfoStatus}}<br>
         <a class="btn btn-info" data-toggle="collapse" href="#infoopt" aria-expanded="false" aria-controls="infoopt">{{ 'Advanced' | translate }}</a>
         <div class="collapse" id="infoopt">
             <div style="padding-left:1em">
-                <button class="btn btn-info" ng-click="prepareSetWalletSecret()">{{'Set_Secret'|translate}}</button><br>
-                <button class="btn btn-info" ng-show="remote.secrets[activeAccount]" ng-click="showSecret = !showSecret">{{'SH_secret'|translate}}</button><br>
-                <div><span style="float:left"><qrcode ng-show="showSecret" version="5" error-correction-level="M" size="160" data="{{remote.secrets[activeAccount]}}" download></qrcode>
-                {{remote.secrets[activeAccount] && showSecret ? remote.secrets[activeAccount] : '' }}</span></div>
+                <label class="input-toggle"><input type="checkbox" ng-model="trustlineStatsIgnoreZero"><span></span></label> {{ 'Hide_zero' | translate }}
             </div>
         </div>
-    </div>
-    <div class="card" style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;">
-        <h4 class="card-title">{{ 'Info' | translate }}</h4>
-        <a class="btn btn-info" data-toggle="collapse" href="#infoopt1" aria-expanded="false" aria-controls="infoopt1">{{ 'Advanced' | translate }}</a>
-        <div class="collapse" id="infoopt1">
-            <div style="padding-left:1em">
-                <button type="button" class="btn btn-info" ng-click="prepareSetRegularKey()">{{ 'Set_RegularKey' | translate }}</button>
-                <button type="button" class="btn btn-info" ng-click="prepareAccountSet({modal: 'info'})">{{ 'Edit_Info' | translate }}</button>
-            </div>
-        </div>
-        <img src="{{accountData.urlgravatar}}" style="margin-right: 5px; margin-bottom: 5px; display: {{accountData.EmailHash ? 'block': 'none'}}">
-        <br>
         <table style="table-layout:fixed" class="table table-hover">
+            <tr>
+                <th>{{ 'C_NOT' | translate }}</th>
+                <th>{{ 'Balance' | translate }}</th>
+            </tr>
             <tr>
                 <td>XRP</td>
                 <td>{{accountBalances.XRP ? accountBalances.XRP : '-'}}</td>
@@ -32,6 +21,18 @@
                 <td>{{ 'Reserved' | translate }}</td>
                 <td>{{accountBalances.XRP ? accountBalances.reserved : '-'}}</td>
             </tr>
+            <tr ng-repeat="(key, value) in trustlinesStats" ng-hide="trustlineStatsIgnoreZero? value.balance == '0' : false">
+                <td>{{currencyName(key)}}({{value.lineNumber}})</td>
+                <td>{{value.balance}}</td>
+            </tr>
+        </table>
+    </div>
+    <div class="card" style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;">
+        <h4 class="card-title">{{ 'Info' | translate }}</h4>
+
+        <img src="{{accountData.urlgravatar}}" style="margin-right: 5px; margin-bottom: 5px; display: {{accountData.EmailHash ? 'block': 'none'}}">
+        <br>
+        <table style="table-layout:fixed" class="table table-hover">
             <tr>
                 <td>Domain</td>
                 <td>{{accountData.domain ? accountData.domain : '-'}}</td>
@@ -61,17 +62,6 @@
                 <td>Message Key</td>
                 <td>{{accountData.MessageKey ? accountData.MessageKey : '-'}}</td>
             </tr>
-        </table>
-    </div>
-    <div class="card" style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;">
-        <h4 class="card-title">{{ 'Account_Flags' | translate }}</h4>
-        <a class="btn btn-info" data-toggle="collapse" href="#infoopt2" aria-expanded="false" aria-controls="infoopt2">{{ 'Advanced' | translate }}</a>
-        <div class="collapse" id="infoopt2">
-            <div style="padding-left:1em">
-                <button type="button" class="btn btn-info" ng-click="prepareAccountSet({modal: 'flags'})">{{ 'Edit_Flags' | translate }}</button>
-            </div>
-        </div><br>
-        <table style="table-layout:fixed" class="table table-hover">
             <tr ng-repeat="(key, value) in accountData['settings']">
                 <td>{{key}}:</td>
                 <td>
@@ -79,6 +69,18 @@
                 </td>
             </tr>
         </table>
+        <a class="btn btn-info" data-toggle="collapse" href="#infoopt1" aria-expanded="false" aria-controls="infoopt1">{{ 'Advanced' | translate }}</a>
+        <div class="collapse" id="infoopt1">
+            <div style="padding-left:1em">
+                <button type="button" class="btn btn-info" ng-click="prepareSetRegularKey()">{{ 'Set_RegularKey' | translate }}</button>
+                <button type="button" class="btn btn-info" ng-click="prepareAccountSet({modal: 'info'})">{{ 'Edit_Info' | translate }}</button>
+                <button type="button" class="btn btn-info" ng-click="prepareAccountSet({modal: 'flags'})">{{ 'Edit_Flags' | translate }}</button>
+                <button class="btn btn-info" ng-click="prepareSetWalletSecret()">{{'Set_Secret'|translate}}</button><br>
+                <button class="btn btn-info" ng-show="remote.secrets[activeAccount]" ng-click="showSecret = !showSecret">{{'SH_secret'|translate}}</button><br>
+                <div><span style="float:left"><qrcode ng-show="showSecret" version="5" error-correction-level="M" size="160" data="{{remote.secrets[activeAccount]}}" download></qrcode>
+                {{remote.secrets[activeAccount] && showSecret ? remote.secrets[activeAccount] : '' }}</span></div>
+            </div>
+        </div>
     </div>
 
     <div ng-show="accountSetLog.status" class="card {{accountSetLog.status == 'FINAL' ? (accountSetLog.status_code.slice(0,3) == 'tes' ? 'card-success' : 'card-danger') : 'card-warning'}}" style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;">

@@ -61,7 +61,7 @@ var translationsEN = {
     OrderBooks: 'OrderBooks',
     BIDS: 'BIDS',
     ASKS: 'ASKS',
-    Hide: 'Hide',
+    Hide: 'Show/Hide',
     Volume: 'Volume',
     Receipient: 'Receipient',
     Use_RF: 'Use RippleName / Federation Address.',
@@ -136,7 +136,7 @@ var translationsCN = {
     OrderBooks: '委托盘',
     BIDS: '买入盘面',
     ASKS: '卖出盘面',
-    Hide: '隐藏',
+    Hide: '显示/隐藏',
     Volume: '委托量',
     Receipient: '接收方',
     Use_RF: '使用RippleName或联邦地址',
@@ -166,8 +166,8 @@ var OrderBookUtils = ripple.OrderBookUtils;
 var CLIENT_VERSION = "yxxyun-0.6";
 var INSERT_CLIENT_INFO = true;
 
-var DEFAULT_ACCOUNT =""; //"rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
-var DEFAULT_SECRET ="";// "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
+var DEFAULT_ACCOUNT = ""; //"rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
+var DEFAULT_SECRET = ""; // "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 
 var PATHFIND_MAX = 10; // stop pathfinding after reaching PATHFIND_MAX
 var SLIPAGE = 1; // 1%, for calculating sendMax
@@ -208,103 +208,102 @@ var remote = new Remote({
 });
 
 var GATEWAYS = [{
-        name: "BitStamp",
-        address: "rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B",
-        currencies: ['USD', 'BTC']
-    }, {
-        name: "SnapSwap",
-        address: "rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q",
-        currencies: ['USD', 'BTC', 'EUR']
-    }, {
-        name: "RippleChina",
-        address: "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA",
-        currencies: ['CNY', 'BTC', 'LTC']
-    }, {
-        name: "RippleCN",
-        address: "rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK",
-        currencies: ['CNY', 'BTC']
-    }, {
-        name: "RippleFox",
-        address: "rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y",
-        currencies: ['CNY', 'FMM', 'STR', 'XLM']
-    }, {
-        name: "TheRock",
-        address: "rLEsXccBGNR3UPuPu2hUXPjziKC3qKSBun",
-        currencies: ['BTC', 'LTC', 'NMC', 'PPC', 'DOG', 'USD ', 'EUR', 'GBP']
-    }, {
-        name: "RippleSingapore",
-        address: "r9Dr5xwkeLegBeXq6ujinjSBLQzQ1zQGjH",
-        currencies: ['SGD', 'XAG', 'XAU', 'XPT', 'USD']
-    }, {
-        name: "DividendRippler",
-        address: "rfYv1TXnwgDDK4WQNbFALykYuEBnrR4pDX",
-        currencies: ['BTC', 'LTC', 'NMC', 'TRC', 'STR']
-    }, {
-        name: "PayRoutes",
-        address: "rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9",
-        currencies: ['USD', 'ILS', 'BTC', 'LTC', 'NMC', 'PPC']
-    }, {
-        name: "RippleUnion",
-        address: "r3ADD8kXSUKHd6zTCKfnKT3zV9EZHjzp1S",
-        currencies: ['CAD']
-    }, {
-        name: "Bitso",
-        address: "rG6FZ31hDHN1K5Dkbma3PSB5uVCuVVRzfn",
-        currencies: ['BTC', 'MXN']
-    }, {
-        name: "ExchangeTokyo",
-        address: "r9ZFPSb1TFdnJwbTMYHvVwFK1bQPUCVNfJ",
-        currencies: ['JPY']
-    }, {
-        name: "DigitalGateJP",
-        address: "rJRi8WW24gt9X85PHAxfWNPCizMMhqUQwg",
-        currencies: ['JPY']
-    }, {
-        name: "TokyoJPY",
-        address: "r94s8px6kSw1uZ1MV98dhSRTvc6VMPoPcN",
-        currencies: ['JPY']
-    }, {
-        name: "Central24",
-        address: "rM1JztoSdHmX2EPnRGRYmKQvkxZ2hnrWsn",
-        currencies: ['JPY']
-    }, {
-        name: "PaxMoneta",
-        address: "rUkMKjQitpgAM5WTGk79xpjT38DEJY283d",
-        currencies: ['KRW']
-    }, {
-        name: "Ripula",
-        address: "rBycsjqxD8RVZP5zrrndiVtJwht7Z457A8",
-        currencies: ['BTC', 'EUR', 'GBP', 'USD']
-    }, {
-        name: "Gatehub",
-        address: "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
-        currencies: ['EUR', 'USD']
-    }, {
-        name: "Bluzelle",
-        address: "raBDVR7JFq3Yho2jf7mcx36sjTwpRJJrGU",
-        currencies: ['CAD']
-    }, {
-        name: "eXRP",
-        address: "rPxU6acYni7FcXzPCMeaPSwKcuS2GTtNVN",
-        currencies: ['KRW']
-    }, {
-        name: "GBI",
-        address: "rrh7rf1gV2pXAoqA8oYbpHd8TKv5ZQeo67",
-        currencies: ['0158415500000000C1F76FF6ECB0BAC600000000', 'XAU (-.5%pa)']
-    }, {
-        name: "Rippex",
-        address: "rfNZPxoZ5Uaamdp339U9dCLWz2T73nZJZH",
-        currencies: ['BRL']
-    }, {
-        name: "PtyCoin",
-        address: "rBadiLisPCyqeyRA1ufVLv5qgVRenP2Zyc",
-        currencies: ['USD', 'PAB', 'BTC', 'LTC', 'DRK']
-    },{
-        name: "MrRipple",
-        address: "rB3gZey7VWHYRqJHLoHDEJXJ2pEPNieKiS",
-        currencies: ['JPY', 'USD']
-    }
-];
+    name: "BitStamp",
+    address: "rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B",
+    currencies: ['USD', 'BTC']
+}, {
+    name: "SnapSwap",
+    address: "rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q",
+    currencies: ['USD', 'BTC', 'EUR']
+}, {
+    name: "RippleChina",
+    address: "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA",
+    currencies: ['CNY', 'BTC', 'LTC']
+}, {
+    name: "RippleCN",
+    address: "rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK",
+    currencies: ['CNY', 'BTC']
+}, {
+    name: "RippleFox",
+    address: "rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y",
+    currencies: ['CNY', 'FMM', 'STR', 'XLM']
+}, {
+    name: "TheRock",
+    address: "rLEsXccBGNR3UPuPu2hUXPjziKC3qKSBun",
+    currencies: ['BTC', 'LTC', 'NMC', 'PPC', 'DOG', 'USD ', 'EUR', 'GBP']
+}, {
+    name: "RippleSingapore",
+    address: "r9Dr5xwkeLegBeXq6ujinjSBLQzQ1zQGjH",
+    currencies: ['SGD', 'XAG', 'XAU', 'XPT', 'USD']
+}, {
+    name: "DividendRippler",
+    address: "rfYv1TXnwgDDK4WQNbFALykYuEBnrR4pDX",
+    currencies: ['BTC', 'LTC', 'NMC', 'TRC', 'STR']
+}, {
+    name: "PayRoutes",
+    address: "rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9",
+    currencies: ['USD', 'ILS', 'BTC', 'LTC', 'NMC', 'PPC']
+}, {
+    name: "RippleUnion",
+    address: "r3ADD8kXSUKHd6zTCKfnKT3zV9EZHjzp1S",
+    currencies: ['CAD']
+}, {
+    name: "Bitso",
+    address: "rG6FZ31hDHN1K5Dkbma3PSB5uVCuVVRzfn",
+    currencies: ['BTC', 'MXN']
+}, {
+    name: "ExchangeTokyo",
+    address: "r9ZFPSb1TFdnJwbTMYHvVwFK1bQPUCVNfJ",
+    currencies: ['JPY']
+}, {
+    name: "DigitalGateJP",
+    address: "rJRi8WW24gt9X85PHAxfWNPCizMMhqUQwg",
+    currencies: ['JPY']
+}, {
+    name: "TokyoJPY",
+    address: "r94s8px6kSw1uZ1MV98dhSRTvc6VMPoPcN",
+    currencies: ['JPY']
+}, {
+    name: "Central24",
+    address: "rM1JztoSdHmX2EPnRGRYmKQvkxZ2hnrWsn",
+    currencies: ['JPY']
+}, {
+    name: "PaxMoneta",
+    address: "rUkMKjQitpgAM5WTGk79xpjT38DEJY283d",
+    currencies: ['KRW']
+}, {
+    name: "Ripula",
+    address: "rBycsjqxD8RVZP5zrrndiVtJwht7Z457A8",
+    currencies: ['BTC', 'EUR', 'GBP', 'USD']
+}, {
+    name: "Gatehub",
+    address: "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+    currencies: ['EUR', 'USD']
+}, {
+    name: "Bluzelle",
+    address: "raBDVR7JFq3Yho2jf7mcx36sjTwpRJJrGU",
+    currencies: ['CAD']
+}, {
+    name: "eXRP",
+    address: "rPxU6acYni7FcXzPCMeaPSwKcuS2GTtNVN",
+    currencies: ['KRW']
+}, {
+    name: "GBI",
+    address: "rrh7rf1gV2pXAoqA8oYbpHd8TKv5ZQeo67",
+    currencies: ['0158415500000000C1F76FF6ECB0BAC600000000', 'XAU (-.5%pa)']
+}, {
+    name: "Rippex",
+    address: "rfNZPxoZ5Uaamdp339U9dCLWz2T73nZJZH",
+    currencies: ['BRL']
+}, {
+    name: "PtyCoin",
+    address: "rBadiLisPCyqeyRA1ufVLv5qgVRenP2Zyc",
+    currencies: ['USD', 'PAB', 'BTC', 'LTC', 'DRK']
+}, {
+    name: "MrRipple",
+    address: "rB3gZey7VWHYRqJHLoHDEJXJ2pEPNieKiS",
+    currencies: ['JPY', 'USD']
+}];
 
 var TRADE_PAIRS = [
     'USD.rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B/XRP',
@@ -375,6 +374,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         templete: 'templetes/tab-info.html',
         select: function() {
             $scope.infoPageLoad();
+            //$scope.trustlinesPageLoad();
         }
     }, {
         title: 'Trustlines',
@@ -433,6 +433,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         $scope.accountData = null;
         $scope.accountBalances.XRP = null;
         $scope.accountInfoStatus = '';
+        $scope.trustlinesReset();
     }
 
     $scope.handleAccountTransaction = function(transaction) {
@@ -475,6 +476,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
 
         $scope.accountBalances.XRP = accountData.xrpBalance;
         $scope.accountBalances.reserved = accountData.xrpReserved;
+        $scope.accountLines();
         //$scope.$apply();
     }
 
@@ -547,11 +549,11 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
                 if (err.remote) {
                     var account = err.remote.account || err.remote.request.account;
                     if (!$scope.walletAccount) {
-                    // $scope.setWalletAccount({
-                    //     address: DEFAULT_ACCOUNT,
-                    //     secret: DEFAULT_SECRET
-                    // });
-                    return;
+                        // $scope.setWalletAccount({
+                        //     address: DEFAULT_ACCOUNT,
+                        //     secret: DEFAULT_SECRET
+                        // });
+                        return;
                     }
                     if (account != $scope.walletAccount._account_id) return;
                     if (err.remote.error) $scope.accountLinesStatus = err.remote.error;
