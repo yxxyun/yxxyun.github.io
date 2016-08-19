@@ -1015,7 +1015,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         if ($scope.pathFind) $scope.pathFindClose();
         $scope.Payment.pathOpts = null;
         $scope.Payment.paths = null;
-
+        
         $scope.Payment.sendmaxValue = '';
         $scope.Payment.sendmaxCurrency = '';
         $scope.Payment.sendmaxIssuer = '';
@@ -1031,8 +1031,8 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
 
     $scope.pathFindStart = function(options) {
         if ($scope.pathFind) $scope.pathFindClose();
-        var payment = $scope.Payment
-
+        var payment = $scope.Payment;
+        payment.pathFindSeparateIssuer=true;
         var sourceCurrencies = [];
         if (payment.pathFindSeparateIssuer) {
             var lines = $scope.trustlines;
