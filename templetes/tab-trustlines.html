@@ -24,6 +24,11 @@
           </span>
             <br>
         </div>
+        <div uib-alert ng-repeat="alert in alerts.trustline" class="alert-{{alert.status == 'FINAL' ? (alert.status_code.slice(0,3) == 'tes' ? 'success' : 'danger') : 'warning'}}" close="closeAlert('trustline', $index)" dismiss-on-timeout="30000">
+            {{alert.description}} <br>
+            <b>Status:</b>[{{alert.status}}{{alert.status_code ? ', ' + alert.status_code : ''}}],
+            <b>Result:</b> {{alert.result}} <br> {{alert.tx_hash ? 'tx_hash: ' + alert.tx_hash : ''}}
+        </div>
         <table class="table table-hover" style="text-align: center;table-layout:fixed">
             <tr style="text-align: center">
                 <th style="text-align: center">{{ 'Currency' | translate }}</th>
@@ -61,8 +66,8 @@
 
     </div>
 
-    <div ng-show="trustSetLog.status" class="card {{trustSetLog.status == 'FINAL' ? (trustSetLog.status_code.slice(0,3) == 'tes' ? 'card-success' : 'card-danger') : 'card-warning'}}" style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;">
+    <!--div ng-show="trustSetLog.status" class="card {{trustSetLog.status == 'FINAL' ? (trustSetLog.status_code.slice(0,3) == 'tes' ? 'card-success' : 'card-danger') : 'card-warning'}}" style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;">
         <b>Tx Status:</b>[{{trustSetLog.status}}{{trustSetLog.status_code ? ', ' + trustSetLog.status_code : ''}}],
         <b>Result:</b> {{trustSetLog.result}} {{trustSetLog.tx_hash ? ', tx_hash: ' + trustSetLog.tx_hash : ''}}
-    </div>
+    </div-->
 </div>

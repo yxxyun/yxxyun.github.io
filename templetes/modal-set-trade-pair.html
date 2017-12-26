@@ -1,31 +1,33 @@
-<div class="modal-header">
-    <h3 class="modal-title">Set Trade Pair</h3>
-</div>
-<div class="modal-body">
-    <form name="setTradePairForm" nonvalidate>
+<form name="setTradePairForm" novalidate>
+    <div class="modal-header">
+        <h3 class="modal-title">Set Trade Pair</h3>
+    </div>
+    <div class="modal-body">
+
         <table>
             <tr>
                 <td>Base Currency:</td>
-                <td><input type="text" class="form-control" name="baseCurrency" ng-model="options.baseCurrency" size=50 autofocus ng-change="options.baseIssuer = (options.baseCurrency == 'XRP') ? null : options.baseIssuer;"></td>
+                <!--        <td><input type="text" class="form-control" name="baseCurrency" ng-model="options.baseCurrency" size=50 autofocus ng-change="options.baseIssuer = (options.baseCurrency == 'XRP') ? null : options.baseIssuer;"></td>
+        -->
+                <td><input type="text" class="form-control" name="baseCurrency" ng-model="options.baseCurrency" size=50 autofocus ng-minlength="3" ng-change="options.baseIssuer = (options.baseCurrency == 'XRP') ? null : options.baseIssuer;" uppercase-only></td>
             </tr>
             <tr>
                 <td>
                     Issuer:
                 </td>
                 <td>
-                    
-                        <input type="text" class="form-control" name="baseIssuer" ng-model="options.baseIssuer" size=50 ripple-valid-address ng-required="options.baseCurrency != 'XRP'"
-                            ng-disabled="options.baseCurrency === 'XRP'">
-                        <span class="dropdown">
+
+                    <input type="text" class="form-control" name="baseIssuer" ng-model="options.baseIssuer" size=50 ripple-valid-address ng-required="options.baseCurrency != 'XRP'" ng-disabled="options.baseCurrency === 'XRP'">
+                    <span class="dropdown">
                           <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Gateway<span class="caret"></span></button>
-                        <ul class="dropdown-menu">
-                            <li ng-repeat="gateway in gateways | filter: {currencies: options.baseCurrency} | orderBy:'name'"><a href="#" ng-click="options.baseIssuer=gateway.address;">{{gateway.name}}</a></li>
-                        </ul>
-                        </span>
-                        <br>&nbsp
-                        <span style="color:green">{{gatewayName(options.baseIssuer)}}</span>
-                        <span style="color:red" ng-show="setTradePairForm.baseIssuer.$dirty && setTradePairForm.baseIssuer.$error.rippleValidAddress">Invalid Address!</span>
-                    
+                    <ul class="dropdown-menu">
+                        <li ng-repeat="gateway in gateways | filter: {currencies: options.baseCurrency} | orderBy:'name'"><a href="#" ng-click="options.baseIssuer=gateway.address;">{{gateway.name}}</a></li>
+                    </ul>
+                    </span>
+                    <br>&nbsp
+                    <span style="color:green">{{gatewayName(options.baseIssuer)}}</span>
+                    <span style="color:red" ng-show="setTradePairForm.baseIssuer.$dirty && setTradePairForm.baseIssuer.$error.rippleValidAddress">Invalid Address!</span>
+
                 </td>
             </tr>
         </table>
@@ -33,35 +35,38 @@
         <table>
             <tr>
                 <td>Trade Currency:</td>
-                <td><input type="text" class="form-control" name="tradeCurrency" ng-model="options.tradeCurrency" size=50 ng-change="options.tradeIssuer = (options.tradeCurrency == 'XRP') ? null : options.tradeIssuer;"></td>
+                <!--      <td><input type="text" class="form-control" name="tradeCurrency" ng-model="options.tradeCurrency" size=50 ng-change="options.tradeIssuer = (options.tradeCurrency == 'XRP') ? null : options.tradeIssuer;"></td>
+          -->
+                <td><input type="text" class="form-control" name="tradeCurrency" ng-model="options.tradeCurrency" size=50 ng-minlength="3" ng-change="options.tradeIssuer = (options.tradeCurrency == 'XRP') ? null : options.tradeIssuer;" uppercase-only></td>
+
             </tr>
             <tr>
 
                 <td>Issuer:</td>
                 <td>
-                    
-                        <input type="text" class="form-control" name="tradeIssuer" ng-model="options.tradeIssuer" size=50 ripple-valid-address ng-required="options.tradeCurrency != 'XRP'"
-                            ng-disabled="options.tradeCurrency === 'XRP'">
-                        <span class="dropdown">
+
+                    <input type="text" class="form-control" name="tradeIssuer" ng-model="options.tradeIssuer" size=50 ripple-valid-address ng-required="options.tradeCurrency != 'XRP'" ng-disabled="options.tradeCurrency === 'XRP'">
+                    <span class="dropdown">
                           <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Gateway<span class="caret"></span></button>
-                        <ul class="dropdown-menu">
-                            <li ng-repeat="gateway in gateways | filter: {currencies: options.tradeCurrency} | orderBy:'name' "><a href="#" ng-click="options.tradeIssuer=gateway.address;">{{gateway.name}}</a></li>
-                            <li class="divider"></li>
-                        </ul>
-                        </span>
-                        <br>&nbsp
-                        <span style="color:green">{{gatewayName(options.tradeIssuer)}}</span>
-                        <span style="color:red" ng-show="setTradePairForm.tradeIssuer.$dirty && setTradePairForm.tradeIssuer.$error.rippleValidAddress">Invalid Address!</span>
-                    
+                    <ul class="dropdown-menu">
+                        <li ng-repeat="gateway in gateways | filter: {currencies: options.tradeCurrency} | orderBy:'name' "><a href="#" ng-click="options.tradeIssuer=gateway.address;">{{gateway.name}}</a></li>
+                        <li class="divider"></li>
+                    </ul>
+                    </span>
+                    <br>&nbsp
+                    <span style="color:green">{{gatewayName(options.tradeIssuer)}}</span>
+                    <span style="color:red" ng-show="setTradePairForm.tradeIssuer.$dirty && setTradePairForm.tradeIssuer.$error.rippleValidAddress">Invalid Address!</span>
+
                 </td>
 
             </tr>
         </table>
-    </form>
-</div>
 
-<div class="modal-footer">
-    <button class="btn btn-primary" type="button" ng-disabled="setTradePairForm.$pristine || setTradePairForm.$invalid || (options.baseCurrency == options.tradeCurrency && (options.baseIssuer == options.tradeIssuer))"
-        ng-click="ok()">{{'Submit'|translate}}</button>
-    <button class="btn btn-warning" type="button" ng-click="cancel()">{{'Cancel'|translate}}</button>
-</div>
+    </div>
+
+    <div class="modal-footer">
+        <!--  <button class="btn btn-primary" type="button" ng-disabled="setTradePairForm.$pristine || setTradePairForm.$invalid || (options.baseCurrency == options.tradeCurrency && (options.baseIssuer == options.tradeIssuer))" ng-click="ok()">{{'Submit'|translate}}</button>
+  --><button class="btn btn-primary" type="submit" ng-disabled="setTradePairForm.$invalid || (options.baseCurrency == options.tradeCurrency && (options.baseIssuer == options.tradeIssuer))" ng-click="ok()">{{'Submit'|translate}}</button>
+        <button class="btn btn-warning" type="button" ng-click="cancel()">{{'Cancel'|translate}}</button>
+    </div>
+</form>

@@ -1,9 +1,13 @@
 <div id="tabOffers">
     <div class="card" style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;">
         <h4 class="card-title">{{ 'Offers' | translate }} </h4>
-        <button class="btn btn-warning" ng-click="getAccountOffers();" ng-disabled="!activeAccount">{{ 'Refresh' | translate }}</button>        <br>{{accountOffers.status}}
+        <button class="btn btn-warning" ng-click="getAccountOffers();" ng-disabled="!activeAccount">{{ 'Refresh' | translate }}</button> <br>{{accountOffers.status}}
         <br><br>
-
+        <div uib-alert ng-repeat="alert in alerts.offer" class="alert-{{alert.status == 'FINAL' ? (alert.status_code.slice(0,3) == 'tes' ? 'success' : 'danger') : 'warning'}}" close="closeAlert('offer', $index)" dismiss-on-timeout="30000">
+            {{alert.description}} <br>
+            <b>Status:</b>[{{alert.status}}{{alert.status_code ? ', ' + alert.status_code : ''}}],
+            <b>Result:</b> {{alert.result}} <br> {{alert.tx_hash ? 'tx_hash: ' + alert.tx_hash : ''}}
+        </div>
         <table class="table table-striped" style="text-align:center;">
             <tr>
                 <th style="text-align:center;">{{ 'Type' | translate }}</th>
@@ -13,23 +17,23 @@
                 <th style="text-align:center;">Expired after </th>
                 <th style="text-align:center;"></th>
             </tr>
-            <tr ng-repeat="offer in accountOffers.all">
+            <tr ng-repeat="offer in accountOffers.offers track by offer.seq">
                 <td><span style="color: {{offerIsSell(offer) ? 'red' : 'green'}};"> {{offerIsSell(offer) ? 'Sell' : 'Buy'}} </span></td>
                 <td>{{offerIsSell(offer) ? amountDisplay(offer.taker_gets) : amountDisplay(offer.taker_pays)}}</td>
                 <td>{{offerIsSell(offer) ? amountDisplay(offer.taker_pays) : amountDisplay(offer.taker_gets)}}</td>
                 <td>{{offerIsSell(offer) ? offerPriceToHuman(offer, true).toPrecision(5) : offerPriceToHuman(offer, false).toPrecision(5)}}</td>
-                <td>{{offer.expiration ? offerExpireHour(offer) + ' hour' : '-' }}</td>
+                <td>{{offer.expiration ? offerExpireHour(offer).toFixed(2) + ' hour' : '-' }}</td>
                 <td>
                     <a href="#" ng-click="prepareOfferEdit({type: offerIsSell(offer) ? 'sell' : 'buy', offer:offer}, true)"><i class="material-icons" role="presentation">edit</i></a>
                     <a href="#" ng-click="prepareOfferCancel({type: offerIsSell(offer) ? 'sell' : 'buy', offer:offer}, true)"><i class="material-icons" role="presentation">delete</i></a>
                 </td>
 
             </tr>
+            <tr ng-show="accountOffers.offers && accountOffers.offers.length === 0">
+                <td colspan="5" align="center">
+                    == No Outstanding Offers ==
+                </td>
+            </tr>
         </table>
     </div>
-</div>
-
-<div ng-show="tradingLog.status" class="card {{tradingLog.status == 'FINAL' ? (tradingLog.status_code.slice(0,3) == 'tes' ? 'card-success' : 'card-danger') : 'card-warning'}}"
-    style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;">
-    <b>Tx Status:</b>[{{tradingLog.status}}{{tradingLog.status_code ? ', ' + tradingLog.status_code : ''}}], <b>Result:</b>    {{tradingLog.result}} {{tradingLog.tx_hash ? ', tx_hash: ' + tradingLog.tx_hash : ''}}
 </div>

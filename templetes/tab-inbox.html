@@ -1,0 +1,54 @@
+<div id="tabInbox">
+    <div class="card" style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;">
+        <h4 class="card-title">Inbox: </h4>
+        <button class="btn btn-warning" ng-click="transactionHistory(true);" ng-disabled="!activeAccount"> {{ 'Refresh' | translate }} </button>
+        <span style="padding-left:1em;" ng-show="transactionHistoryStatus == 'Full' || transactionHistoryStatus == 'Loaded'">
+            {{txInbox.length === 0 ? ' == No Messages == ' : ''}}
+          </span>
+    </div>
+    <div class="card" style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;" ng-repeat="tx in walletAccount.history | filter:inboxFilter as txInbox">
+        <div class="panel-heading" ng-click="tx.showMessage = !tx.showMessage">
+            <span style="padding-left:1em; padding-right:1em"> 
+                {{tx.date | date:'yyyy-MM-dd, HH:mm:ss'}} 
+              </span>
+            <span style="padding-left:1em; padding-right:1em"> 
+                From: 
+                <span style="color:green">{{parseAddress(tx.raw.Account)}}</span>
+            </span>
+            Tx:
+            <a href="https://charts.ripple.com/#/transactions/{{tx.hash}}" target="_blank" ng-show="network=='MAIN'"><span class="glyphicon glyphicon-new-window"></span></a>
+        </div>
+        <div class="panel-body" ng-show="tx.showMessage">
+            <div ng-repeat="memo in tx.memos | filter:messageFilter">
+                <pre>{{memo.memoData}}</pre>
+            </div>
+        </div>
+    </div>
+    <div class="panel panel-default" ng-show="transactionHistoryStatus">
+        <div class="panel-heading" ng-click="transactionHistoryStatus == 'Loaded' ? transactionHistory() : null" align="center">
+            {{transactionHistoryStatus == 'Full' ? 'No more Messages' : transactionHistoryStatus == 'Loaded' ? 'Load More' : 'Loading...' }}
+        </div>
+    </div>
+
+</div>
+<div id="tabMessage">
+    <div class="card" style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;">
+        <h4 class="card-title">Send Message: </h4>
+
+        <form name="messageForm" id="messageForm" novalidate>
+            <input type="text" class="form-control" size="50" name="to" placeholder="Ripple Address" ng-model="message.to" required ripple-valid-address typeahead="contact.address as contact.name for contact in contacts | filter:{name:$viewValue}" typeahead-on-select="setMessageRecipient($item)"
+                ng-change="setMessageRecipient()" ng-model-options="{ debounce: 250 }">
+            <span style="color:green">{{parseAddress(message.to, message.dtag)}}</span>
+            <br><br>
+            <textarea class="form-control" form="messageForm" name="data" placeholder="message" ng-model="message.data" cols=100 rows=5 maxlength="900" required></textarea>
+            <br><br>
+            <button type="button" class="btn btn-info" ng-disabled="messageForm.$invalid" ng-click="sendMessage()">{{'Submit'|translate}}</button>
+        </form>
+        <div class="panel panel-info" ng-show="messageLog.status">
+            <div class="panel-body {{messageLog.status == 'FINAL' ? (messageLog.status_code.slice(0,3) == 'tes' ? 'bg-success' : 'bg-danger') : 'bg-warning'}}">
+                [{{messageLog.status}}]: {{messageLog.status_code || messageLog.result}} {{messageLog.tx_hash ? ', tx_hash: ' + messageLog.tx_hash : ''}}
+                <a href="https://charts.ripple.com/#/transactions/{{messageLog.tx_hash}}" target="_blank" ng-show="messageLog.tx_hash"><span class="glyphicon glyphicon-new-window"></span> </a>
+            </div>
+        </div>
+    </div>
+</div>

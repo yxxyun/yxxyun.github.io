@@ -1,5 +1,4 @@
-var walletApp = angular.module('walletApp', ['ui.bootstrap', 'monospaced.qrcode', 'ngCookies', 'pascalprecht.translate']);
-
+var walletApp = angular.module('walletApp', ['ui.bootstrap', 'jsonFormatter', 'ngStorage', 'monospaced.qrcode', 'ngCookies', 'pascalprecht.translate', ]);
 var translationsEN = {
     Ripple_Wallet: 'Ripple Wallet',
     Network: 'Network',
@@ -73,6 +72,10 @@ var translationsEN = {
     RDQR: 'read secret',
     Random: 'New Random Secret',
     SH_secret: 'Show Secret',
+    History: "History",
+    Settings: "Settings",
+    Total: "Total",
+    Tools: "Tools",
 };
 
 var translationsCN = {
@@ -148,178 +151,191 @@ var translationsCN = {
     RDQR: '读取密钥',
     Random: '新生成密钥',
     SH_secret: '显示密钥',
+    History: "历史记录",
+    Settings: "设置",
+    Total: "共",
+    Tools: "工具",
 };
-
 var Remote = ripple.Remote;
 var Seed = ripple.Seed;
+var KeyPair = ripple.KeyPair;
 var Utils = ripple.utils;
 var UInt160 = ripple.UInt160;
 var Amount = ripple.Amount;
 var Currency = ripple.Currency;
 var sjcl = ripple.utils.sjcl;
 var base58 = ripple.Base;
-var Wallet = ripple.Wallet;
 var OrderBookUtils = ripple.OrderBookUtils;
 
 // ================= configuration & Global constant  ==================
 
-var CLIENT_VERSION = "yxxyun-0.6";
+var CLIENT_VERSION = "rm-1.2.4"
 var INSERT_CLIENT_INFO = true;
 
-var DEFAULT_ACCOUNT = ""; //"rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
-var DEFAULT_SECRET = ""; // "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
+var DEFAULT_ACCOUNT = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
+var DEFAULT_SECRET = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
+var HISTORY_MAX = 10;
 
 var PATHFIND_MAX = 10; // stop pathfinding after reaching PATHFIND_MAX
 var SLIPAGE = 1; // 1%, for calculating sendMax
 
 var RIPPLE_DATA_URL = 'https://data.ripple.com';
 var CHART_INTERVAL = '1hour'; // 1minute, 15minute, 30minute, 1hour, 1day...
-var CHART_MAX_PAGE = 5; // max pages for repeated queries to data.ripple.com;
+var CHART_MAX_PAGE = 1; // max pages for repeated queries to data.ripple.com;
 var CHART_LIMIT = 1000; // limit number for single query;
 
 var DEVIATION_ALERT = 0.20; // alert when offerCreate price deviate >20% from market.
 var APPLY_INTEREST = false; // false: showing raw amount instead of demuraged figure.
 
-var remote = new Remote({
-    // see the API Reference for available options
-    trusted: false,
-    local_signing: true,
-    local_fee: true,
-    fee_cushion: 1.2,
-    max_fee: 15000,
-    max_attempts: 0, // do not resubmit tx. 
-    servers: [{
+var SERVERS_MAINNET = [{
         host: 's1.ripple.com',
         port: 443,
-        secure: true
-    }, {
-        host: 's2.ripple.com',
-        port: 443,
-        secure: true
-    }, {
-        host: 's-west.ripple.com',
-        port: 443,
-        secure: true
-    }, {
+        secure: true,
+        primary: true
+    },
+    {
         host: 's-east.ripple.com',
         port: 443,
         secure: true
-    }]
-});
+    },
+    {
+        host: 's-west.ripple.com',
+        port: 443,
+        secure: true
+    },
+    {
+        host: 's2.ripple.com',
+        port: 443,
+        secure: true
+    }
+];
+
+var SERVERS_TESTNET = [{
+    host: 's.altnet.rippletest.net',
+    port: 51233,
+    secure: true
+}];
 
 var GATEWAYS = [{
-    name: "BitStamp",
-    address: "rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B",
-    currencies: ['USD', 'BTC']
-}, {
-    name: "SnapSwap",
-    address: "rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q",
-    currencies: ['USD', 'BTC', 'EUR']
-}, {
-    name: "RippleChina",
-    address: "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA",
-    currencies: ['CNY', 'BTC', 'LTC']
-}, {
-    name: "RippleCN",
-    address: "rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK",
-    currencies: ['CNY', 'BTC']
-}, {
-    name: "RippleFox",
-    address: "rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y",
-    currencies: ['CNY', 'FMM', 'STR', 'XLM']
-}, {
-    name: "TheRock",
-    address: "rLEsXccBGNR3UPuPu2hUXPjziKC3qKSBun",
-    currencies: ['BTC', 'LTC', 'NMC', 'PPC', 'DOG', 'USD ', 'EUR', 'GBP']
-}, {
-    name: "RippleSingapore",
-    address: "r9Dr5xwkeLegBeXq6ujinjSBLQzQ1zQGjH",
-    currencies: ['SGD', 'XAG', 'XAU', 'XPT', 'USD']
-}, {
-    name: "DividendRippler",
-    address: "rfYv1TXnwgDDK4WQNbFALykYuEBnrR4pDX",
-    currencies: ['BTC', 'LTC', 'NMC', 'TRC', 'STR']
-}, {
-    name: "PayRoutes",
-    address: "rNPRNzBB92BVpAhhZr4iXDTveCgV5Pofm9",
-    currencies: ['USD', 'ILS', 'BTC', 'LTC', 'NMC', 'PPC']
-}, {
-    name: "RippleUnion",
-    address: "r3ADD8kXSUKHd6zTCKfnKT3zV9EZHjzp1S",
-    currencies: ['CAD']
-}, {
-    name: "Bitso",
-    address: "rG6FZ31hDHN1K5Dkbma3PSB5uVCuVVRzfn",
-    currencies: ['BTC', 'MXN']
-}, {
-    name: "ExchangeTokyo",
-    address: "r9ZFPSb1TFdnJwbTMYHvVwFK1bQPUCVNfJ",
-    currencies: ['JPY']
-}, {
-    name: "DigitalGateJP",
-    address: "rJRi8WW24gt9X85PHAxfWNPCizMMhqUQwg",
-    currencies: ['JPY']
-}, {
-    name: "TokyoJPY",
-    address: "r94s8px6kSw1uZ1MV98dhSRTvc6VMPoPcN",
-    currencies: ['JPY']
-}, {
-    name: "Central24",
-    address: "rM1JztoSdHmX2EPnRGRYmKQvkxZ2hnrWsn",
-    currencies: ['JPY']
-}, {
-    name: "PaxMoneta",
-    address: "rUkMKjQitpgAM5WTGk79xpjT38DEJY283d",
-    currencies: ['KRW']
-}, {
-    name: "Ripula",
-    address: "rBycsjqxD8RVZP5zrrndiVtJwht7Z457A8",
-    currencies: ['BTC', 'EUR', 'GBP', 'USD']
-}, {
-    name: "Gatehub",
-    address: "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
-    currencies: ['EUR', 'USD']
-}, {
-    name: "Bluzelle",
-    address: "raBDVR7JFq3Yho2jf7mcx36sjTwpRJJrGU",
-    currencies: ['CAD']
-}, {
-    name: "eXRP",
-    address: "rPxU6acYni7FcXzPCMeaPSwKcuS2GTtNVN",
-    currencies: ['KRW']
-}, {
-    name: "GBI",
-    address: "rrh7rf1gV2pXAoqA8oYbpHd8TKv5ZQeo67",
-    currencies: ['0158415500000000C1F76FF6ECB0BAC600000000', 'XAU (-.5%pa)']
-}, {
-    name: "Rippex",
-    address: "rfNZPxoZ5Uaamdp339U9dCLWz2T73nZJZH",
-    currencies: ['BRL']
-}, {
-    name: "PtyCoin",
-    address: "rBadiLisPCyqeyRA1ufVLv5qgVRenP2Zyc",
-    currencies: ['USD', 'PAB', 'BTC', 'LTC', 'DRK']
-}, {
-    name: "MrRipple",
-    address: "rB3gZey7VWHYRqJHLoHDEJXJ2pEPNieKiS",
-    currencies: ['JPY', 'USD']
-}];
+        name: "BitStamp",
+        address: "rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B",
+        currencies: ['USD', 'BTC']
+    }, {
+        name: "RippleChina",
+        address: "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA",
+        currencies: ['CNY']
+    }, {
+        name: "RippleCN",
+        address: "rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK",
+        currencies: ['CNY', 'BTC']
+    }, {
+        name: "RippleFox",
+        address: "rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y",
+        currencies: ['CNY', 'FMM', 'XLM']
+    }, {
+        name: "Gatehub",
+        address: "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+        currencies: ['EUR', 'USD']
+    }, {
+        name: "Rippex",
+        address: "rfNZPxoZ5Uaamdp339U9dCLWz2T73nZJZH",
+        currencies: ['BRL']
+    }, {
+        name: "MrRipple",
+        address: "rB3gZey7VWHYRqJHLoHDEJXJ2pEPNieKiS",
+        currencies: ['JPY', 'USD', 'BTC', 'BCC', 'LTC', 'DOG', 'STR', 'RJP', 'ETH', 'ETC', 'ADA', 'REP']
+    }, {
+        name: "GatehubFifthBTC",
+        address: "rchGBxcD1A1C2tdxF6papQYZ8kjRKMYcL",
+        currencies: ['BTC']
+    },
+    {
+        name: "GatehubFifthETH",
+        address: "rcA8X3TVMST1n3CJeAdGk1RdRCHii7N2h",
+        currencies: ['ETH']
+    },
+    {
+        name: "GatehubFifthETC",
+        address: "rDAN8tzydyNfnNf2bfUQY6iR96UbpvNsze",
+        currencies: ['ETC']
+    },
+    {
+        name: "GatehubFifthDSH",
+        address: "rcXY84C4g14iFp6taFXjjQGVeHqSCh9RX",
+        currencies: ['DSH']
+    },
+    {
+        name: "GatehubFifthBCH",
+        address: "rcyS4CeCZVYvTiKcxj6Sx32ibKwcDHLds",
+        currencies: ['BCH']
+    },
+    {
+        name: "GatehubFifthREP",
+        address: "rckzVpTnKpP4TJ1puQe827bV3X4oYtdTP",
+        currencies: ['REP']
+    },
+    {
+        name: "GatehubFifthQAU",
+        address: "r3ttJ41YnMrKiLqGUXJpQE8urqyMGjC8vE",
+        currencies: ['QAU']
+    },
+    {
+        name: "RippexBridge",
+        address: "rKxKhXZCeSDsbkyB8DVgxpjy5AHubFkMFe",
+        currencies: ['BTC']
+    },
+
+];
 
 var TRADE_PAIRS = [
     'USD.rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B/XRP',
     'BTC.rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B/XRP',
-    'BTC.rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q/XRP',
-    'BTC.rLEsXccBGNR3UPuPu2hUXPjziKC3qKSBun/XRP',
     'CNY.rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y/XRP',
     'CNY.razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA/XRP',
-    'CNY.rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK/XRP',
-    'JPY.r9ZFPSb1TFdnJwbTMYHvVwFK1bQPUCVNfJ/XRP',
-    'JPY.r94s8px6kSw1uZ1MV98dhSRTvc6VMPoPcN/XRP',
-    'JPY.rJRi8WW24gt9X85PHAxfWNPCizMMhqUQwg/XRP',
-    'KRW.rUkMKjQitpgAM5WTGk79xpjT38DEJY283d/XRP',
-    'BRL.rfNZPxoZ5Uaamdp339U9dCLWz2T73nZJZH/XRP',
-    'MXN.rG6FZ31hDHN1K5Dkbma3PSB5uVCuVVRzfn/XRP',
+]
+
+var GATEWAYS_TEST = [{
+        name: "GateOne",
+        address: "r9U9DDht72oMx7nrqsS7uELXNvfsYL4USm",
+        currencies: ['USD', 'BTC']
+    },
+    {
+        name: "GateTwo",
+        address: "rH6C28kDJURagNz1Mt6oX9PEyFtJqxyTwo",
+        currencies: ['CNY', 'JPY']
+    },
 ];
+
+var TRADE_PAIRS_TEST = [
+    'USD.r9U9DDht72oMx7nrqsS7uELXNvfsYL4USm/XRP',
+    'BTC.r9U9DDht72oMx7nrqsS7uELXNvfsYL4USm/XRP',
+    'CNY.rH6C28kDJURagNz1Mt6oX9PEyFtJqxyTwo/XRP',
+    'JPY.rH6C28kDJURagNz1Mt6oX9PEyFtJqxyTwo/XRP',
+    'BTC.r9U9DDht72oMx7nrqsS7uELXNvfsYL4USm/USD.r9U9DDht72oMx7nrqsS7uELXNvfsYL4USm',
+    'USD.r9U9DDht72oMx7nrqsS7uELXNvfsYL4USm/CNY.rH6C28kDJURagNz1Mt6oX9PEyFtJqxyTwo',
+    'USD.r9U9DDht72oMx7nrqsS7uELXNvfsYL4USm/JPY.rH6C28kDJURagNz1Mt6oX9PEyFtJqxyTwo',
+]
+
+var DEFAULT = {
+    account: {
+        address: DEFAULT_ACCOUNT,
+        secret: DEFAULT_SECRET
+    },
+    accounts: [],
+    slipage: SLIPAGE,
+    max_fee: 120,
+    fee_cushion: 1.2,
+    orderbook_limit: 50,
+    last_ledger_offset: 3,
+    servers: SERVERS_MAINNET,
+    gateways: GATEWAYS,
+    tradepairs: TRADE_PAIRS,
+    servers_test: SERVERS_TESTNET,
+    gateways_test: GATEWAYS_TEST,
+    tradepairs_test: TRADE_PAIRS_TEST,
+    contacts: [],
+    contacts_test: []
+}
 
 walletApp.config(['$translateProvider', function($translateProvider) {
     // add translation tables
@@ -330,327 +346,13 @@ walletApp.config(['$translateProvider', function($translateProvider) {
     $translateProvider.useLocalStorage();
     $translateProvider.useSanitizeValueStrategy('escape');
 }]);
-
-
-
 // ========= main controller ====================================
 
 
-walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal', function($translate, $scope, $http, $uibModal) {
+walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal', '$localStorage', function($translate, $scope, $http, $uibModal, $localStorage) {
     $scope.changeLanguage = function(langKey) {
         $translate.use(langKey);
     };
-
-    $scope.gateways = GATEWAYS;
-    $scope.tradepairs = TRADE_PAIRS;
-
-    $scope.accountHistory = [];
-    $scope.accountBalances = {};
-    $scope.paymentSlipage = SLIPAGE;
-
-    $scope.trading = {
-        pair: $scope.tradepairs[0]
-    };
-
-    $scope.flags = Remote.flags;
-
-    $scope.remote = remote;
-
-    remote.on('state', function(state) {
-        $scope.state = state;
-        $scope.$apply();
-    })
-    remote.on('ledger_closed', function(msg, server) {
-        $scope.ledgerIndex = msg.ledger_index;
-        $scope.server = remote.getServer()._url;
-        try {
-            $scope.$apply();
-        } catch (e) {};
-    })
-    remote.connect();
-
-    $scope.tabs = [{
-        title: 'Info',
-        templete: 'templetes/tab-info.html',
-        select: function() {
-            $scope.infoPageLoad();
-            //$scope.trustlinesPageLoad();
-        }
-    }, {
-        title: 'Trustlines',
-        templete: 'templetes/tab-trustlines.html',
-        select: function() {
-            $scope.trustlinesPageLoad();
-        }
-    }, {
-        title: 'Payment',
-        templete: 'templetes/tab-payment.html',
-        select: function() {
-            $scope.paymentReset();
-        }
-    }, {
-        title: 'Trading',
-        templete: 'templetes/tab-trading.html',
-        select: function() {
-            $scope.tradingPageLoad();
-        }
-    }, {
-        title: 'Offers',
-        templete: 'templetes/tab-offers.html',
-        select: function() {
-            $scope.offerPageLoad();
-        }
-    }, ]
-
-    $scope.alerts = [];
-
-    $scope.closeAlert = function(index) {
-        $scope.alerts.splice(index, 1);
-    };
-
-    $scope.inGatewayList = function(account) {
-        if (!account) return false;
-
-        var gateways = $scope.gateways;
-        for (var i = 0; i < gateways.length; i++) {
-            if (account == gateways[i].address) return true;
-        }
-        return false;
-    }
-
-    $scope.gatewayName = function(account) {
-        if (!account) {
-            return '';
-        }
-        var gateways = $scope.gateways;
-        for (var i = 0; i < gateways.length; i++) {
-            if (account == gateways[i].address) return gateways[i].name;
-        }
-        return account;
-    }
-
-    $scope.accountInfoReset = function() {
-        $scope.accountData = null;
-        $scope.accountBalances.XRP = null;
-        $scope.accountInfoStatus = '';
-        $scope.trustlinesReset();
-    }
-
-    $scope.handleAccountTransaction = function(transaction) {
-        if (!transaction.mmeta) return;
-
-        var changed = false;
-        transaction.mmeta.each(function(an) {
-            var isAccount = an.fields.Account === $scope.walletAccount._account_id;
-            var isAccountRoot = isAccount && an.entryType === 'AccountRoot';
-            if (isAccountRoot) {
-                Object.assign($scope.walletAccount.account_data, an.fieldsNew, an.fieldsFinal);
-                Object.keys(an.fieldsPrev).forEach(function(field) {
-                    if (!an.fieldsFinal.hasOwnProperty(field)) {
-                        delete $scope.walletAccount.account_data[field];
-                    }
-                })
-                changed = true;
-            }
-        });
-        if (changed) $scope.updateAccountInfo();
-        $scope.accountInfoStatus = 'Updated @ Ledger:' + transaction.ledger_index;
-    }
-
-    $scope.updateAccountInfo = function() {
-        var accountData = $scope.walletAccount.account_data;
-
-        accountData.domain = accountData.Domain ? Utils.hexToString(accountData.Domain) : '';
-        accountData.xrpBalance = accountData.Balance / 1000000;
-        accountData.xrpReserved = 20 + (accountData.OwnerCount ? accountData.OwnerCount : 0) * 5;
-
-        accountData.settings = {};
-
-        var flags = Remote.flags['account_root'];
-        for (var flag in flags) {
-            accountData.settings[flag] = accountData.Flags & flags[flag] ? true : false;
-            accountData.settings['AccountTxnID'] = accountData.hasOwnProperty('AccountTxnID') ? true : false;
-        }
-
-        $scope.accountData = accountData;
-
-        $scope.accountBalances.XRP = accountData.xrpBalance;
-        $scope.accountBalances.reserved = accountData.xrpReserved;
-        $scope.accountLines();
-        //$scope.$apply();
-    }
-
-    $scope.accountInfo = function() {
-        if (!$scope.walletAccount) return;
-
-        $scope.accountInfoStatus = 'requesting...';
-
-        remote.requestAccountInfo({
-            account: $scope.walletAccount._account_id,
-            ledger: 'validated'
-        }, function(err, res) {
-            if (err) {
-                if (err.remote) {
-                    var account = err.remote.account || err.remote.request.account;
-                    if (account != $scope.walletAccount._account_id) return;
-                    if (err.remote.error) $scope.accountInfoStatus = err.remote.error;
-                } else {
-                    $scope.accountInfoStatus = err.error;
-                }
-            }
-            if (res && res.account_data) {
-                if (res.account_data.Account != $scope.walletAccount._account_id) return;
-                $scope.walletAccount.account_data = res.account_data;
-                $scope.accountInfoStatus = 'Updated @ Ledger:' + res.ledger_index;
-                $scope.updateAccountInfo();
-            }
-            //$scope.$apply();
-        })
-    }
-
-    $scope.infoPageLoad = function() {
-        if (!$scope.walletAccount) {
-            // $scope.setWalletAccount({
-            //     address: DEFAULT_ACCOUNT,
-            //     secret: DEFAULT_SECRET
-            // });
-            return;
-        }
-        if (!$scope.walletAccount.account_data) $scope.accountInfo();
-    }
-
-    $scope.trustlinesReset = function() {
-        $scope.accountBalances.IOU = {};
-        $scope.trustlines = null;
-        $scope.trustlinesStats = null;
-        $scope.totalTrustlines = 0;
-        $scope.accountLinesStatus = '';
-    }
-
-    $scope.trustlinesPageLoad = function() {
-        if ($scope.inGatewayList($scope.activeAccount)) return;
-        if (!$scope.trustlines) $scope.accountLines();
-    }
-
-    $scope.accountLines = function(callback) {
-        if (typeof callback != 'function') callback = function() {};
-        $scope.accountLinesStatus = 'refreshing...';
-        var LINES = [];
-        var page = 0;
-
-        var request = remote.requestAccountLines({
-            account: $scope.activeAccount,
-            ledger: 'validated'
-        });
-        request.callback(function handle_message(err, res) {
-            var self = this;
-
-            if (err) {
-                if (err.remote) {
-                    var account = err.remote.account || err.remote.request.account;
-                    if (!$scope.walletAccount) {
-                        // $scope.setWalletAccount({
-                        //     address: DEFAULT_ACCOUNT,
-                        //     secret: DEFAULT_SECRET
-                        // });
-                        return;
-                    }
-                    if (account != $scope.walletAccount._account_id) return;
-                    if (err.remote.error) $scope.accountLinesStatus = err.remote.error;
-                } else {
-                    $scope.accountLinesStatus = err.error;
-                }
-            }
-            if (res) {
-                if (res.account != $scope.activeAccount) return;
-                var account = res.account;
-                var lines = res.lines;
-                LINES = LINES.concat(lines);
-
-                page++;
-
-                if (res.marker) {
-                    $scope.accountLinesStatus = 'requesting page #' + (page + 1) + ' ...';
-                    self.message.marker = res.marker;
-                    self.requested = false;
-                    self.callback(handle_message);
-                    return;
-                }
-
-                $scope.accountLinesStatus = 'Updated';
-
-                $scope.trustlines = LINES;
-                $scope.linesStats();
-            }
-            callback(err, res);
-            //$scope.$apply();          
-        });
-    }
-
-    $scope.lineBalanceFloat = function(line) {
-        return parseFloat(line.balance);
-    }
-
-    $scope.linesStats = function() {
-        $scope.trustlinesStats = null;
-
-        var lines = $scope.trustlines;
-        var total = 0;
-
-        var stats = {};
-        for (var i = 0; i < lines.length; i++) {
-            var currency = lines[i].currency;
-            var balance = parseFloat(lines[i].balance);
-            if (!stats.hasOwnProperty(currency)) stats[currency] = {
-                balance: 0,
-                lineNumber: 0
-            };
-            stats[currency].balance += balance;
-            stats[currency].lineNumber++;
-            total++;
-        }
-
-        $scope.totalTrustlines = total;
-        $scope.trustlinesStats = stats;
-    }
-
-    $scope.generateNewSecret = function() {
-        return ripple.Wallet.getRandom().secret;
-    }
-
-    $scope.prepareGenerateAccount = function(options) {
-        if (!options) options = {};
-        var modalInstance = $uibModal.open({
-            animation: false,
-            templateUrl: 'templetes/modal-generate-account.html',
-            controller: 'ModalCtrl',
-            scope: $scope,
-            resolve: {
-                options: function() {
-                    return options;
-                }
-            }
-        });
-
-        modalInstance.result.then(function(new_options) {
-            var secret = new_options.secret;
-            var index = Number(new_options.index) || 0;
-
-            if (secret) {
-                var seed = Seed.from_json(secret);
-                var key = seed.get_key(index);
-                var address = key.get_address().to_json();
-
-                options.secret = secret;
-                options.index = index;
-                options.address = address;
-            }
-
-        }, function() {
-            // do nothing; 
-        });
-    };
-
     var qr = new QrCode();
     var qrsec;
     qr.callback = function(result) {
@@ -673,6 +375,690 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
             reader.readAsDataURL(photofile);
         });
     };
+    $scope.$storage = $localStorage.$default(DEFAULT);
+
+    var remote = new Remote({
+        trusted: false,
+        local_signing: true,
+        local_fee: true,
+        fee_cushion: $localStorage.fee_cushion,
+        max_fee: $localStorage.max_fee,
+        servers: $localStorage.servers,
+        orderbook_limit: $localStorage.orderbook_limit,
+        last_ledger_offset: $localStorage.last_ledger_offset,
+    });
+    $scope.gateways = $localStorage.gateways;
+    $scope.tradepairs = $localStorage.tradepairs;
+    $scope.servers = $localStorage.servers;
+    $scope.accountHistory = $localStorage.accounts;
+    $scope.contacts = $localStorage.contacts;
+
+    $scope.accountBalances = {};
+    $scope.Payment = {
+        slipage: $localStorage.slipage
+    };
+
+    $scope.trading = {
+        pair: $scope.tradepairs[0]
+    };
+
+    $scope.flags = Remote.flags;
+    $scope.txFlags = ripple.Transaction.flags;
+    $scope.scFlags = ripple.Transaction.set_clear_flags.AccountSet;
+
+    $scope.remote = remote;
+
+    remote.on('state', function(state) {
+        $scope.state = state;
+    })
+    remote.on('ledger_closed', function(msg, server) {
+        $scope.ledgerIndex = msg.ledger_index;
+        var server = remote.getServer();
+        if (!server) return;
+        $scope.server = server._opts.host;
+        $scope.fee = server._fee;
+        try { $scope.$apply(); } catch (e) {};
+    })
+    remote.connect();
+
+    $scope.tabs = [
+        { title: 'Info', templete: 'templetes/tab-info.html', select: function() { $scope.infoPageLoad(); } },
+        { title: 'Trustlines', templete: 'templetes/tab-trustlines.html', select: function() { $scope.trustlinesPageLoad(); } },
+        { title: 'Payment', templete: 'templetes/tab-payment.html', select: function() { $scope.paymentReset(); } },
+        { title: 'Trading', templete: 'templetes/tab-trading.html', select: function() { $scope.tradingPageLoad(); } },
+        { title: 'Offers', templete: 'templetes/tab-offers.html', select: function() { $scope.offerPageLoad(); } },
+        { title: 'History', templete: 'templetes/tab-history.html', select: function() { $scope.historyPageLoad(); } },
+        { title: 'Settings', templete: 'templetes/tab-settings.html', select: function() {} },
+        { title: 'Tools', templete: 'templetes/tab-inbox.html', select: function() { $scope.messageReset(); } },
+    ]
+    $scope.tabActive = { Info: true };
+
+    $scope.alerts = {
+        account: [],
+        trustline: [],
+        payment: [],
+        trading: [],
+        offer: [],
+    }
+
+    $scope.networks = ['MAIN', 'TEST'];
+    $scope.network = 'MAIN';
+    $scope.state = 'offline'
+
+    $scope.tools = [
+        // { title: 'Raw Txn', templete: 'templetes/tab-transaction.html' },
+        // { title: 'Submit', templete: 'templetes/tab-submit.html' },
+        // { title: 'Account-Generator', templete: 'templetes/tab-keys.html', select: function() { $scope.keysReset(); } },
+        { title: 'Message', templete: 'templetes/tab-message.html', select: function() { $scope.messageReset(); } },
+        { title: 'Inbox', templete: 'templetes/tab-inbox.html', select: function() {} },
+    ];
+
+    $scope.keys = {};
+    $scope.gkeys = {}
+
+    $scope.keysReset = function() {
+        $scope.keys = {
+            from: 'seed',
+            priformat: 'base58',
+            seedformat: 'base58',
+        }
+    }
+    $scope.keysRandom = function() {
+        switch ($scope.keys.from) {
+            case 'seed':
+                $scope.keys.secret = Seed.getRandom().to_json();
+                break;
+            case 'private':
+                $scope.keys.secret = KeyPair.getRandom().to_pri_string();
+        }
+        $scope.keys.index = 0;
+        $scope.generateKeys();
+    }
+    $scope.generateKeys = function() {
+        if (!$scope.keys.index && $scope.keys.from != 'private') $scope.keys.index = 0;
+        $scope.gkeys = {};
+        $scope.keys.error = '';
+        var seed, g, key;
+        var index = $scope.keys.index;
+        switch ($scope.keys.from) {
+            case 'passphrase':
+                seed = new Seed().parse_passphrase($scope.keys.secret);
+                break;
+            case 'seed':
+                seed = Seed.from_json($scope.keys.secret);
+                if (!seed.is_valid()) $scope.keys.error = 'Invalid Secret!'
+                break;
+            case 'private':
+                key = KeyPair.from_json($scope.keys.secret);
+                if (!key.is_valid()) $scope.keys.error = 'Invalid PrivateKey!'
+        }
+
+        if (seed && seed.is_valid()) {
+            $scope.gkeys.seed = {
+                base58: seed.to_json(),
+                hex: seed.to_hex(),
+                rfc1751: seed.to_human(),
+            }
+            g = seed.get_generator();
+            $scope.gkeys.generator = {
+                pri_node: g.to_pri_node(),
+                pub_node: g.to_pub_node(),
+            }
+            key = g.get_child(index);
+        }
+
+        if (key && key.is_valid()) {
+            $scope.gkeys.account = {
+                index: index,
+                prikey_hex: key.to_pri_hex(),
+                prikey_base58: key.to_pri_string(),
+                prikey_bitcoin: key.to_wif_bitcoin(),
+                prikey_rfc1751: key.to_human(),
+                pubkey_hex: key.to_pub_hex(),
+                address: key.to_address_string(),
+            }
+        }
+    }
+    $scope.generateChild = function() {
+        if (!$scope.gkeys.childIndex) $scope.gkeys.childIndex = 0;
+        var index = $scope.gkeys.childIndex;
+        var hardened = $scope.gkeys.childHardened;
+        var childkey = KeyPair.from_json($scope.gkeys.account.prikey_hex).get_child(index, hardened);
+        if (childkey.is_valid()) {
+            $scope.gkeys.child = {
+                index: index + (hardened ? Math.pow(2, 32) : 0),
+                prikey_hex: childkey.to_pri_hex(),
+                prikey_base58: childkey.to_pri_string(),
+                prikey_bitcoin: childkey.to_wif_bitcoin(),
+                prikey_rfc1751: childkey.to_human(),
+                pubkey_hex: childkey.to_pub_hex(),
+                address: childkey.to_address_string(),
+            }
+        }
+    }
+
+    $scope.messageReset = function() {
+        $scope.message = {
+            to: '',
+            data: '',
+            dtag: undefined,
+        };
+    };
+
+    $scope.setMessageRecipient = function(contact) {
+        $scope.message.dtag = undefined;
+        if (contact && typeof contact.dtag == 'number') $scope.message.dtag = contact.dtag;
+    };
+
+    $scope.sendMessage = function() {
+        var transaction = remote.transaction();
+        transaction.payment({
+            to: $scope.message.to,
+            from: $scope.activeAccount,
+            amount: '1',
+        });
+        var memo = {
+            memoType: 'message',
+            memoFormat: 'text',
+            memoData: $scope.message.data,
+        }
+        transaction.addMemo(memo);
+        if (typeof $scope.message.dtag == 'number') {
+            transaction.tx_json.DestinationTag = $scope.message.dtag;
+        }
+        $scope.messageLog = {};
+        $scope.submitTransaction({ transaction: transaction, log: $scope.messageLog });
+    };
+
+    $scope.inboxFilter = function(tx) {
+        if (!tx.memos) return false;
+        if (tx.raw.TransactionType == 'Payment') {
+            if (!$scope.messageSettings.Payment) return false;
+            if (tx.raw.Destination != $scope.activeAccount) return false;
+        }
+        if (tx.raw.TransactionType == 'TrustSet') {
+            if (!$scope.messageSettings.TrustSet) return false;
+            if (tx.raw.LimitAmount.issuer != $scope.activeAccount) return false;
+        }
+        var gotMessage = false;
+        tx.memos.forEach(function(m) {
+            if ($scope.messageFilter(m) && m.memoData) gotMessage = true;;
+        })
+        return gotMessage;
+    }
+
+    $scope.messageFilter = function(m) {
+        if (m.memoType && $scope.messageSettings.ignoreTypes.indexOf(m.memoType) >= 0) return false;
+        return true;
+    }
+
+    $scope.messageSettings = {
+        Payment: true,
+        TrustSet: true,
+        ignoreTypes: ['client'],
+    };
+
+    $scope.transactions = [
+        { type: 'AccountSet', templete: 'templetes/tx-accountSet.html' },
+        { type: 'SetRegularKey', templete: 'templetes/tx-setRegularKey.html' },
+        { type: 'SignerListSet', templete: 'templetes/tx-signerListSet.html' },
+        { type: 'TrustSet', templete: 'templetes/tx-trustSet.html' },
+        { type: 'Payment', templete: 'templetes/tx-payment.html' },
+        { type: 'OfferCreate', templete: 'templetes/tx-offerCreate.html' },
+        { type: 'OfferCancel', templete: 'templetes/tx-offerCancel.html' },
+    ];
+    $scope.txActive = { AccountSet: true };
+
+    $scope.txSetSigners = function() {
+        function formatSignerEntry(signer) {
+            return {
+                SignerEntry: {
+                    Account: signer.address,
+                    SignerWeight: signer.weight
+                }
+            }
+        }
+        $scope.prepareSetSignerList(function(options) {
+            $scope.txJson.SignerQuorum = options.quorum;
+            if (options.quorum) {
+                $scope.txJson.SignerEntries = options.signers.map(formatSignerEntry);
+            } else {
+                delete $scope.txJson.SignerEntries;
+            }
+        })
+    };
+    $scope.txSetAccount = function() {
+        $scope.txJson.Account = $scope.activeAccount;
+    };
+    $scope.txSetSequence = function() {
+        $scope.txJson.Sequence = $scope.accountData.Sequence;
+    };
+    $scope.txLastLedgerSequence = function() {
+        $scope.txJson.LastLedgerSequence = $scope.ledgerIndex;
+    };
+    $scope.txSetSecret = function() {
+        $scope.txOptions.secret = remote.secrets[$scope.activeAccount];
+    };
+    $scope.txSetSignAs = function() {
+        $scope.txOptions.signAs = $scope.activeAccount;
+    };
+    $scope.txSetExpirationNow = function() {
+        var now = Date.now();
+        $scope.txJson.Expiration = Utils.time.toRipple(now);
+    };
+    $scope.txExpirationAddHour = function() {
+        $scope.txJson.Expiration += 3600;
+    };
+    $scope.txExpirationAddDay = function() {
+        $scope.txJson.Expiration += (24 * 3600);
+    };
+
+    $scope.txJsonReset = function() {
+        if (!$scope.txJson) $scope.txJson = {};
+        var newJson = {};
+        newJson.Flags = 0x80000000;
+        ['Account', 'Sequence', 'Fee', 'LastLedgerSequence', 'SourceTag', 'AccountTxnID'].forEach(function(field) {
+            if ($scope.txJson[field]) newJson[field] = $scope.txJson[field];
+        })
+        $scope.txJson = newJson;
+
+        if (!$scope.txOptions) $scope.txOptions = {};
+        var newOptions = {};
+        ['LastLedgerSequence', 'SourceTag', 'AccountTxnID', 'secret', 'signAs', 'isMultiSign'].forEach(function(field) {
+            if ($scope.txOptions[field]) newOptions[field] = $scope.txOptions[field];
+        });
+        $scope.txOptions = newOptions;
+        $scope.txBlob = '';
+    }
+    $scope.txJsonRemove = function(field) {
+        delete $scope.txJson[field];
+    }
+    $scope.txSetFlag = function(flag) {
+        var flagValue = ripple.Transaction.flags[$scope.txJson.TransactionType][flag];
+        if (!flagValue) return;
+        $scope.txJson.Flags |= flagValue;
+        $scope.txJson.Flags = $scope.txJson.Flags >>> 0;
+    }
+    $scope.txClearFlag = function(flag) {
+        var flagValue = ripple.Transaction.flags[$scope.txJson.TransactionType][flag];
+        if (!flagValue) return;
+        $scope.txJson.Flags &= (~flagValue);
+        $scope.txJson.Flags = $scope.txJson.Flags >>> 0;
+    }
+    $scope.txSign = function() {
+        $scope.txError = '';
+
+        var tx = remote.transaction();
+        tx.on('error', function(e) {
+            if (e && e.result) $scope.txError = e.result;
+        })
+        tx._setFixedFee = true;
+        tx.tx_json = $scope.txJson;
+
+        $scope.setSecret({
+            account: $scope.txOptions.isMultiSign ? $scope.txOptions.signAs : $scope.txJson.Account,
+            secret: $scope.txOptions.secret
+        })
+
+        // Removing existing signature    
+        delete tx.tx_json.SigningPubKey;
+        delete tx.tx_json.TxnSignature;
+
+        var signAs = $scope.txOptions.signAs;
+        if ($scope.txOptions.isMultiSign) {
+            tx._multiSign = true;
+            if (Array.isArray(tx.tx_json.Signers)) {
+                var signers = tx.tx_json.Signers;
+                for (var i = signers.length - 1; i >= 0; i--) {
+                    if (signers[i].Signer.Account === signAs) signers.splice(i, 1);
+                }
+            }
+        } else {
+            delete tx.tx_json.Signers;
+        }
+
+        if (!tx.complete()) return;
+
+        if (!tx._multiSign) tx.sign();
+        else tx.multiSignFor(signAs);
+
+        $scope.txBlob = tx.serialize().to_hex();
+    }
+    $scope.txBlobSave = function() {
+        var blob = new Blob([$scope.txBlob], { type: "text/json;charset=utf-8" });
+        saveAs(blob, 'tx-blob.txt');
+    }
+    $scope.txImport = function(element) {
+        var file = element.files[0];
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var tx = new ripple.SerializedObject(reader.result).to_json();
+                $scope.txJson = tx;
+                $scope.txActive[tx.TransactionType] = true;
+            } catch (e) {};
+            $scope.$apply();
+        };
+        reader.readAsText(file);
+    }
+    $scope.txSubmitBlob = {};
+    $scope.txSubmitImport = function(element) {
+        var file = element.files[0];
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            $scope.txSubmitBlob = { blob: reader.result };
+            $scope.txSubmitResponse = '';
+            $scope.$apply();
+        };
+        reader.readAsText(file);
+    }
+    $scope.txSubmit = function() {
+        $scope.txSubmitResponse = 'submitting...';
+        var submitRequest = remote.requestSubmit();
+        submitRequest.tx_blob($scope.txSubmitBlob.blob);
+        submitRequest.once('success', function(res) {
+            $scope.txSubmitResponse = res.engine_result + ': ' + res.engine_result_message;
+        });
+        submitRequest.broadcast().request();
+    }
+
+    $scope.filename = 'ripple-wallet-profile.txt';
+    $scope.exportProfile = function() {
+        var data = JSON.stringify($scope.$storage, null, 2);
+        var blob = new Blob([data], { type: "text/json;charset=utf-8" });
+        saveAs(blob, $scope.filename);
+    }
+
+    $scope.fileNameChanged = function(element) {
+        var file = element.files[0];
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var result;
+            try { result = JSON.parse(reader.result) } catch (e) {};
+            $scope.uploaded = result ? 'Load Success, please refresh the browser.' : 'Failed parsing data.';
+            Object.assign($localStorage, result);
+            $scope.$apply();
+        };
+        reader.readAsText(file);
+    }
+
+    $scope.switchNetwork = function(network) {
+        if (network == $scope.network) return;
+
+        //disconnect and remove all servers and accounts;
+        remote._servers.forEach(function(server) {
+            server.disconnect();
+        });
+        remote._servers = [];
+        remote._accounts = [];
+
+        //reconfigure and reconnect;
+        if (network == 'MAIN') {
+            remote.servers = $scope.servers = $localStorage.servers;
+            $scope.gateways = $localStorage.gateways;
+            $scope.tradepairs = $localStorage.tradepairs;
+            $scope.contacts = $localStorage.contacts;
+        } else if (network == 'TEST') {
+            remote.servers = $scope.servers = $localStorage.servers_test;
+            $scope.gateways = $localStorage.gateways_test;
+            $scope.tradepairs = $localStorage.tradepairs_test;
+            $scope.contacts = $localStorage.contacts_test;
+        }
+        remote._ledger_current_index = undefined;
+        remote.servers.forEach(function(serverOptions) {
+            var server = remote.addServer(serverOptions);
+            server.setMaxListeners(remote.max_listeners);
+        });
+        remote.connect();
+
+        $scope.network = network;
+        $scope.ledgerIndex;
+        $scope.walletAccount = null;
+        $scope.setWalletAccount({ address: $scope.activeAccount });
+        $scope.setTradePair($scope.tradepairs[0]);
+        $scope.orderBooksReset();
+    }
+
+    $scope.closeAlert = function(type, index) {
+        if (!type) return;
+        $scope.alerts[type].splice(index, 1);
+    };
+
+    $scope.getFullContacts = function() {
+        return $scope.contacts.concat($scope.gateways);
+    }
+
+    $scope.inGatewayList = function(account) {
+        if (!account) return false;
+
+        var gateways = $scope.gateways;
+        for (var i = 0; i < gateways.length; i++) {
+            if (account == gateways[i].address) return true;
+        }
+        return false;
+    }
+
+    $scope.gatewayName = function(account, sliced) {
+        if (!account) { return ''; }
+        var gateways = $scope.gateways;
+        for (var i = 0; i < gateways.length; i++) {
+            if (account == gateways[i].address) return gateways[i].name;
+        }
+
+        return sliced ? [account.slice(0, 4), account.slice(-4)].join('....') : account;
+    }
+
+    $scope.contactName = function(account, dtag) {
+        if (!account) { return ''; }
+        var contacts = $scope.contacts;
+        for (var i = 0, l = contacts.length; i < l; i++) {
+            if (account === contacts[i].address && dtag === contacts[i].dtag) return contacts[i].name;
+        }
+        return '';
+    }
+
+    $scope.parseAddress = function(account, dtag) {
+        return $scope.contactName(account, dtag) || $scope.gatewayName(account);
+    }
+
+    $scope.accountInfoReset = function() {
+        $scope.accountData = null;
+        $scope.accountBalances.XRP = null;
+        $scope.accountInfoStatus = '';
+    }
+
+    $scope.updateAccountInfo = function(entry, ledger_index) {
+        $scope.accountInfoStatus = 'Updated @ Ledger:' + ledger_index;
+        var accountData = $scope.walletAccount._entry;
+
+        accountData.domain = accountData.Domain ? Utils.hexToString(accountData.Domain) : '';
+        accountData.xrpBalance = accountData.Balance / 1000000;
+        accountData.xrpReserved = remote.reserve(accountData.OwnerCount).to_human();
+
+        accountData.settings = {};
+
+        var flags = Remote.flags['account_root'];
+        for (var flag in flags) {
+            accountData.settings[flag] = accountData.Flags & flags[flag] ? true : false;
+            accountData.settings['AccountTxnID'] = accountData.hasOwnProperty('AccountTxnID') ? true : false;
+        }
+
+        if (accountData.signer_lists && accountData.signer_lists[0]) {
+            var slist = accountData.signer_lists[0];
+            accountData.quorum = slist.SignerQuorum;
+            accountData.signers = slist.SignerEntries.map(function(signer) {
+                return {
+                    address: signer.SignerEntry.Account,
+                    weight: signer.SignerEntry.SignerWeight,
+                }
+            });
+        } else {
+            accountData.signers = [];
+            accountData.quorum = 0;
+        }
+
+        $scope.accountData = accountData;
+        $scope.accountBalances.XRP = accountData.xrpBalance;
+        $scope.accountBalances.reserved = accountData.xrpReserved;
+        $scope.accountLines();
+        $scope.$apply();
+    }
+
+    $scope.accountInfo = function() {
+        if (!$scope.walletAccount) return;
+
+        $scope.accountInfoStatus = 'requesting...';
+
+        $scope.walletAccount.entry(function(err, res) {
+            if (err) {
+                if (err.remote) {
+                    var account = err.remote.account || err.remote.request.account;
+                    if (account != $scope.walletAccount._account_id) return;
+                    if (err.remote.error) $scope.accountInfoStatus = err.remote.error;
+                } else { $scope.accountInfoStatus = err.error; }
+            }
+        })
+    }
+
+    $scope.infoPageLoad = function() {
+        if (!$scope.walletAccount) {
+            if ($localStorage.account) $scope.setWalletAccount($localStorage.account);
+        }
+        if (!$scope.walletAccount._entry.Account) $scope.accountInfo();
+    }
+
+    $scope.trustlinesReset = function() {
+        $scope.accountBalances.IOU = {};
+        $scope.trustlines = null;
+        $scope.trustlinesStats = null;
+        $scope.totalTrustlines = 0;
+        $scope.accountLinesStatus = '';
+    }
+
+    $scope.trustlinesPageLoad = function() {
+        if (!$scope.walletAccount) return;
+        $scope.trustlines = $scope.walletAccount._lines;
+        if ($scope.trustlines) {
+            $scope.accountLinesStatus = 'updated @ ledger: ' + $scope.walletAccount._lines_updated;
+            $scope.linesStats();
+        } else {
+            if ($scope.inGatewayList($scope.activeAccount)) return; // do not auto-request trustlines for gateway issuer.
+            if (!$scope.trustlines) $scope.accountLines();
+        }
+    }
+
+    $scope.accountLines = function(callback) {
+        if (!remote.isConnected()) return;
+        if (typeof callback != 'function') callback = function() {};
+        $scope.accountLinesStatus = 'refreshing...';
+        var LINES = [];
+        var page = 0;
+
+        var ledger_index = remote._ledger_current_index - 1;
+
+        var request = remote.requestAccountLines({ account: $scope.activeAccount, ledger: ledger_index });
+        request.callback(function handle_message(err, res) {
+            var self = this;
+
+            if (err) {
+                if (err.remote) {
+                    var account = err.remote.account || err.remote.request.account;
+                    if (account != $scope.walletAccount._account_id) return;
+                    if (err.remote.error) $scope.accountLinesStatus = err.remote.error;
+                } else { $scope.accountLinesStatus = err.error; }
+            }
+            if (res) {
+                if (res.account != $scope.activeAccount) return;
+                var account = res.account;
+                var lines = res.lines;
+                LINES = LINES.concat(lines);
+
+                page++;
+
+                if (res.marker) {
+                    $scope.accountLinesStatus = 'requesting page #' + (page + 1) + ' ...';
+                    self.message.marker = res.marker;
+                    self.requested = false;
+                    self.callback(handle_message);
+                    return;
+                }
+
+                $scope.accountLinesStatus = 'Updated @ ledger:' + ledger_index;
+
+                $scope.trustlines = LINES;
+                $scope.walletAccount._lines = LINES;
+                $scope.walletAccount._lines_updated = ledger_index;
+                $scope.linesStats();
+            }
+            callback(err, res);
+            $scope.$apply();
+        });
+    }
+
+    $scope.lineBalanceFloat = function(line) {
+        return parseFloat(line.balance);
+    }
+
+    $scope.linesStats = function() {
+        $scope.trustlinesStats = null;
+
+        var lines = $scope.trustlines;
+        var total = 0;
+
+        var stats = {};
+        for (var i = 0; i < lines.length; i++) {
+            var currency = lines[i].currency;
+            var balance = parseFloat(lines[i].balance);
+            if (!stats.hasOwnProperty(currency)) stats[currency] = { balance: 0, lineNumber: 0 };
+            stats[currency].balance += balance;
+            stats[currency].lineNumber++;
+            total++;
+        }
+
+        $scope.totalTrustlines = total;
+        $scope.trustlinesStats = stats;
+    }
+
+    $scope.generateNewSecret = function() {
+        return Seed.getRandom().to_json();
+    }
+
+    $scope.prepareGenerateAccount = function(options) {
+        if (!options) options = {};
+        var modalInstance = $uibModal.open({
+            animation: false,
+            templateUrl: 'templetes/modal-generate-account.html',
+            controller: 'ModalCtrl',
+            scope: $scope,
+            resolve: {
+                options: function() {
+                    return options;
+                }
+            }
+        });
+
+        modalInstance.result.then(function(new_options) {
+            var secret = new_options.secret;
+            var index = Number(new_options.index) || 0;
+
+            if (secret) {
+                var key = undefined;
+                var seed = Seed.from_json(secret);
+                if (seed.is_valid()) {
+                    key = seed.get_key(index);
+                } else {
+                    key = KeyPair.from_json(secret);
+                }
+                if (!key || !(key.is_valid())) return;
+                options.secret = secret;
+                options.index = index;
+                options.address = key.to_address_string();
+            }
+
+        }, function() {
+            // do nothing; 
+        });
+    }
 
     $scope.prepareSetWalletAccount = function(options) {
         if (!options) options = {};
@@ -702,22 +1088,25 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         if (!account) return;
 
         if (!$scope.walletAccount || $scope.walletAccount._account_id != account) {
-            if ($scope.walletAccount) $scope.walletAccount.removeAllListeners();
+            if ($scope.walletAccount) {
+                $scope.walletAccount.removeListener('entry', $scope.updateAccountInfo);
+                $scope.walletAccount.removeListener('transaction', $scope.handleTransaction);
+            }
             $scope.accountInfoReset();
             $scope.trustlinesReset();
             $scope.accountOffers = {};
+            $scope.transactionHistoryStatus = '';
 
             $scope.activeAccount = account;
             $scope.walletAccount = $scope.remote.account(account);
-            if (secret) remote.setSecret(account, secret);
+            if (secret) $scope.setWalletSecret({ secret: secret });
 
             $scope.addAccountHistory($scope.activeAccount);
             $scope.accountInfo();
-            //$scope.getAccountOffers();
+            $scope.trustlinesPageLoad();
 
-            $scope.walletAccount.on('transaction', function(tx) {
-                $scope.handleAccountTransaction(tx);
-            })
+            $scope.walletAccount.on('entry', $scope.updateAccountInfo);
+            $scope.walletAccount.on('transaction', $scope.handleTransaction);
         }
     }
 
@@ -728,7 +1117,6 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
             animation: false,
             templateUrl: 'templetes/modal-set-wallet-secret.html',
             controller: 'ModalCtrl',
-            scope: $scope,
             resolve: {
                 options: function() {
                     return options;
@@ -743,25 +1131,31 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         });
     }
 
+    $scope.secrets = {};
     $scope.setWalletSecret = function(options) {
+        if (!options || !options.secret) return;
+        options.account = $scope.activeAccount;
+        $scope.setSecret(options);
+    }
+
+    $scope.setSecret = function(options) {
         var secret = options.secret;
-        remote.setSecret($scope.activeAccount, secret);
+        var account = options.account;
+        if (Seed.is_valid(secret)) {
+            remote.setSecret(account, secret);
+        } else if (KeyPair.is_valid(secret)) {
+            // remove existing secrets
+            delete remote.secrets[account];
+            remote.setKey(account, secret)
+        }
+        $scope.secrets[account] = secret;
     }
 
     $scope.addAccountHistory = function(address) {
-        if ($scope.accountHistory.indexOf(address) < 0) $scope.accountHistory.push(address);
-    }
-
-    $scope.setSecret = function() {
-        var secret = $scope.formSecret;
-
-        if (secret[0] != 's' || !Seed.from_json(secret).is_valid()) {
-            return alert('Invalid Secret!')
-        };
-
-        remote.setSecret($scope.activeAccount, secret);
-        $scope.editSecret = false;
-        $scope.formSecret = '';
+        var i = $scope.accountHistory.indexOf(address);
+        if (i >= 0) $scope.accountHistory.splice(i, 1);
+        $scope.accountHistory.unshift(address);
+        if ($scope.accountHistory.length > HISTORY_MAX) $scope.accountHistory.splice(HISTORY_MAX);
     }
 
     $scope.currencyName = function(currency) {
@@ -769,29 +1163,22 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
     }
 
     $scope.amountDisplay = function(amount, opts) {
-        if (!opts) opts = {
-            value: true,
-            currency: true,
-            issuer: true,
-            gatewayName: true
-        };
+        if (!opts) opts = { value: true, currency: true, issuer: true, gatewayName: true };
 
-        var options = {
-            max_sig_digits: opts.max_sig_digits
-        };
+        var options = { max_sig_digits: opts.max_sig_digits || 6 };
 
         if (APPLY_INTEREST) {
             options.reference_date = new Date();
         }
-        var now = new Date();
-        var amount = Amount.from_json(amount).to_human_full(options).split('/');
+
+        if (!(amount instanceof Amount)) amount = Amount.from_json(amount);
+        amount = amount.to_human_full(options).split('/');
 
         var value = amount[0];
         var currency = amount[1];
         var issuer = amount[2];
 
-        //if (opts.precision) value = Number(value).toPrecision(opts.precision);
-        if (opts.issuer && opts.gatewayName) issuer = $scope.gatewayName(issuer);
+        if (opts.issuer && opts.gatewayName) issuer = $scope.gatewayName(issuer, opts.sliced);
 
         var result = '';
 
@@ -961,7 +1348,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
             $http.get('https://' + subdomain[i] + domain + '/ripple.txt')
                 .success(rippleTxtSuccess)
                 .error(function() {
-                    if (i < subdomain.length) return RippleTxt(i + 1, callback);
+                    if (i < subdomain.length - 1) return RippleTxt(i + 1, callback);
                     else rippleTxtFailed();
                 });
         }
@@ -1010,12 +1397,53 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
 
     }
 
+    $scope.setRecipient = function(contact) {
+        $scope.federationReset();
+        $scope.Payment.destinationTag = undefined;
+        var recipient = $scope.Payment.recipient;
+
+        function isFederation(str) {
+            // ripplename;
+            if (/^~[a-zA-Z0-9]([\-]?[a-zA-Z0-9]){0,19}$/.test(str)) return true;
+
+            // checking for email type address (e.g.xyz@domain.com)
+            var domain_split = str.search(/@([\w-]+\.)+[\w-]{2,}$/);
+            if (domain_split <= 0) return false;
+            return true;
+        }
+
+        if ($scope.isValidAddress(recipient)) {
+            $scope.Payment.destination = recipient;
+            if (contact && (contact.destinationTag !== undefined || contact.dtag !== undefined)) {
+                $scope.Payment.destinationTag = contact.destinationTag || contact.dtag;
+            }
+            $scope.getRecipientCurrencies();
+        }
+        if (isFederation(recipient)) {
+            $scope.Payment.federationAddress = recipient;
+            $scope.resolveFederation();
+        }
+    }
+
+    $scope.isValidAddress = function(address) {
+        return UInt160.is_valid(address);
+    }
+
+    $scope.isRipplename = function(address) {
+        return /^~[a-zA-Z0-9]([\-]?[a-zA-Z0-9]){0,19}$/.test(address);
+    }
+
+    $scope.isFederation = function(address) {
+        // checking for email type address (e.g.xyz@domain.com)
+        return address.search(/@([\w-]+\.)+[\w-]{2,}$/) > 0;
+    }
+
     // =========== Path Finding ===============================
     $scope.pathFindAutoStart = function() {
         if ($scope.pathFind) $scope.pathFindClose();
         $scope.Payment.pathOpts = null;
         $scope.Payment.paths = null;
-        
+
         $scope.Payment.sendmaxValue = '';
         $scope.Payment.sendmaxCurrency = '';
         $scope.Payment.sendmaxIssuer = '';
@@ -1031,16 +1459,20 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
 
     $scope.pathFindStart = function(options) {
         if ($scope.pathFind) $scope.pathFindClose();
-        var payment = $scope.Payment;
-        payment.pathFindSeparateIssuer=true;
+        var payment = $scope.Payment
+
         var sourceCurrencies = [];
         if (payment.pathFindSeparateIssuer) {
             var lines = $scope.trustlines;
             if (lines) {
-                sourceCurrencies.push({
-                    currency: 'XRP'
-                });
-                for (var i = 0; i < lines.length; i++) {
+                var len = lines.length;
+                if (len > 15) {
+                    // if there's too many trustlines, take 15 highest balance.
+                    lines.sort(function(a, b) { return b.balance - a.balance });
+                    len = 15;
+                }
+                sourceCurrencies.push({ currency: 'XRP' });
+                for (var i = 0; i < len; i++) {
                     sourceCurrencies.push({
                         currency: lines[i].currency,
                         issuer: lines[i].account
@@ -1051,9 +1483,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
                     // delay untill trustlines updated.
                     $scope.Payment.pathFindStatus = 'checking source currencies...'
                     $scope.accountLines(function() {
-                        $scope.pathFindStart({
-                            lines_updated: true
-                        });
+                        $scope.pathFindStart({ lines_updated: true });
                     });
                     return;
                 }
@@ -1073,7 +1503,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
             src_account: $scope.activeAccount,
             dst_account: payment.destination,
             dst_amount: Amount.from_json(AMOUNT),
-            src_currencies: sourceCurrencies
+            src_currencies: sourceCurrencies.length ? sourceCurrencies : undefined
         })
 
         pathfind.on('error', function(msg) {
@@ -1086,9 +1516,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
             var path_opts = msg.alternatives;
             if (!path_opts || !path_opts.length) $scope.Payment.pathFindStatus = 'No Path Found!';
             else {
-                try {
-                    path_opts = JSON.parse(path_opts)
-                } catch (e) {};
+                try { path_opts = JSON.parse(path_opts) } catch (e) {};
                 $scope.Payment.pathFindRes = path_opts;
                 $scope.Payment.pathFindStatus = 'Path_Finding Response:' + counter++;
                 $scope.Payment.pathOpts = path_opts;
@@ -1115,8 +1543,29 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         $scope.Payment.paths = paths;
     }
 
+    // ============= payment ==============================
+    $scope.pay = function(opts) {
+        $scope.payto = {
+            destination: opts.destination || opts.account || opts.address,
+            destinationTag: (typeof opts.destinationTag == 'number') ? opts.destinationTag : opts.dtag,
+            amountValue: opts.amount || opts.value || opts.amountValue,
+            amountCurrency: opts.currency || opts.amountCurrency,
+        };
+        $scope.tabActive['Payment'] = true;
+    }
+
+    $scope.getRecipientCurrencies = function() {
+        $scope.Payment.recipientCurrencies = ['XRP'];
+        var account = $scope.Payment.destination;
+        if (!account) return;
+        remote.requestAccountCurrencies({ account: account }, function(err, res) {
+            if (account !== $scope.Payment.destination) return;
+            if (res) $scope.Payment.recipientCurrencies = $scope.Payment.recipientCurrencies.concat(res.receive_currencies);
+        });
+    }
+
     $scope.setSendmax = function(amount) {
-        var multiplier = 1 + $scope.paymentSlipage / 100;
+        var multiplier = 1 + $scope.Payment.slipage / 100;
         if (amount.value) {
             if (amount.currency == 'XRP' && $scope.Payment.amountCurrency == 'XRP') multiplier = 1;
             $scope.Payment.sendmaxValue = String(amount.value * multiplier);
@@ -1179,9 +1628,14 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
                 }
             }
             if (payment.sendmaxValue) transaction.tx_json.SendMax = SENDMAX;
-            if (payment.paths) transaction.tx_json.Paths = payment.paths;
+            if (payment.paths && payment.paths.length) transaction.tx_json.Paths = payment.paths;
         }
 
+        if (payment.memo) {
+            transaction.addMemo({
+                memoData: payment.memo
+            })
+        }
         if (payment.memos) {
             var memos = payment.memos;
             for (var i = 0; i < memos.length; i++) {
@@ -1189,24 +1643,36 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
             }
         }
 
-        $scope.paymentLog = {};
-        $scope.submitTransaction({
-            transaction: transaction,
-            log: $scope.paymentLog
-        }, function(err, res) {
+        var alert = { description: 'Sending ' + payment.amountValue + ' ' + payment.amountCurrency + ' to ' + payment.destination };
+        $scope.alerts.payment.push(alert);
+        $scope.submitTransaction({ transaction: transaction, log: alert }, function(err, res) {
+            if (err && err.remote) {
+                alert.result = err.remote.error + ': ' + err.remote.error_exception;
+            }
             if (res && res.metadata) {
                 var delivered = res.metadata.DeliveredAmount;
                 if (!delivered) delivered = res.tx_json.Amount;
-                $scope.paymentLog.result += ', Delivered Amount = ' + $scope.amountDisplay(delivered, {
-                    value: true,
-                    currency: true
-                });
+                alert.result += ', Delivered Amount = ' + $scope.amountDisplay(delivered, { value: true, currency: true });
             }
         });
     }
 
     $scope.paymentReset = function() {
-        $scope.Payment = {};
+        var advanceMode = $scope.Payment.advanceMode;
+        $scope.Payment = {
+            slipage: $localStorage.slipage,
+            advanceMode: advanceMode,
+        };
+        if ($scope.payto) {
+            Object.keys($scope.payto).forEach(function(key) {
+                $scope.Payment[key] = $scope.payto[key];
+            })
+            if (!advanceMode) {
+                $scope.Payment.recipient = $scope.Payment.destination;
+                $scope.setRecipient($scope.payto);
+            }
+            $scope.payto = undefined;
+        }
     }
 
     // =================== transaction submission ===================================
@@ -1236,10 +1702,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         tx_log.status = 'PREPARE';
 
         if (INSERT_CLIENT_INFO) {
-            transaction.addMemo({
-                memoType: 'ripple-wallet-md',
-                memoData: CLIENT_VERSION
-            });
+            transaction.addMemo({ memoType: 'client', memoData: CLIENT_VERSION });
         }
 
         transaction.submit(function(err, res) {
@@ -1248,9 +1711,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
             tx_log.summary = transaction.summary();
             tx_log.result = tx_log.summary.result.engine_result;
             tx_log.tx_hash = tx_log.summary.result.transaction_hash;
-
             callback(err, res)
-            $scope.$apply();
         });
 
     }
@@ -1291,6 +1752,60 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         });
     };
 
+
+    // =============  modal Set Signer List =====================
+    $scope.prepareSetSignerList = function(callback) {
+        var options = {
+            signers: [],
+            weightSum: function() {
+                var sum = 0;
+                for (var i = 0; i < options.signers.length; i++) {
+                    sum += options.signers[i].weight;
+                }
+                return sum;
+            }
+        }
+
+        var modalInstance = $uibModal.open({
+            animation: false,
+            templateUrl: 'templetes/modal-set-signer-list.html',
+            controller: 'ModalCtrl',
+            scope: $scope,
+            resolve: {
+                options: function() {
+                    return options;
+                }
+            }
+        });
+
+        modalInstance.result.then(function(options) {
+            if (typeof callback == 'function') return callback(options);
+            $scope.setSignerList(options);
+        }, function() {
+            // do nothing; 
+        });
+    };
+
+    $scope.setSignerList = function(options) {
+        var transaction = remote.transaction();
+        transaction.signerListSet({
+            account: $scope.activeAccount,
+            signers: options.signers,
+            quorum: options.quorum
+        });
+
+        if (options.memos) {
+            var memos = options.memos;
+            for (var i = 0; i < memos.length; i++) {
+                transaction.addMemo(memos[i]);
+            }
+        }
+
+        var alert = { description: 'Set SignerList' };
+        $scope.alerts.account.push(alert);
+        $scope.submitTransaction({ transaction: transaction, log: alert });
+    }
+
     // =============  modal Set RegularKey =====================
     $scope.regularKey = '';
 
@@ -1328,11 +1843,9 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
                 transaction.addMemo(memos[i]);
             }
         }
-        $scope.accountSetLog = {};
-        $scope.submitTransaction({
-            transaction: transaction,
-            log: $scope.accountSetLog
-        });
+        var alert = { description: 'Set RegularKey' };
+        $scope.alerts.account.push(alert);
+        $scope.submitTransaction({ transaction: transaction, log: alert });
     }
 
     //  ================== Account Set ============================================
@@ -1422,16 +1935,18 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         }
 
         if (settings.editMessageKey) {
-            transaction.tx_json.messageKey = settings.messageKey ? settings.messageKey : '';
+            transaction.tx_json.MessageKey = settings.messageKey ? settings.messageKey : '';
         }
 
-        if (settings.memos) transaction.tx_json.memos = settings.memos;
+        if (settings.editTickSize) {
+            transaction.tx_json.TickSize = settings.tickSize ? settings.tickSize : 0;
+        }
 
-        $scope.accountSetLog = {};
-        $scope.submitTransaction({
-            transaction: transaction,
-            log: $scope.accountSetLog
-        });
+        if (settings.memos) transaction.tx_json.Memos = settings.memos;
+
+        var alert = { description: 'Account Set' };
+        $scope.alerts.account.push(alert);
+        $scope.submitTransaction({ transaction: transaction, log: alert });
     }
 
     //  ================== Add or Edit Trustlines. ================================
@@ -1501,16 +2016,89 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
 
         transaction.setFlags(flags);
 
-        $scope.trustSetLog = {};
-        $scope.trustSetLog.tx_json = transaction.tx_json;
+        var alert = { description: 'Trustline setting for ' + settings.currency + '.' + settings.account };
+        $scope.alerts.trustline.push(alert);
 
-        $scope.submitTransaction({
-            transaction: transaction,
-            log: $scope.trustSetLog
-        });
+        $scope.submitTransaction({ transaction: transaction, log: alert });
     }
 
     // ===================== Charting ===============================
+    $scope.drawMarketDepth = function() {
+        var currency = $scope.trading.baseCurrency;
+        var bids = $scope.trading.bidOffers;
+        var asks = $scope.trading.askOffers;
+
+        var data_bids = [];
+        var data_asks = [];
+
+        if (bids.length) {
+            var price_min = $scope.offerPriceToHuman(bids[0]) / 1.3;
+            for (var i = 0; i < bids.length; i++) {
+                var price = $scope.offerPriceToHuman(bids[i]);
+                if (price < price_min) break;
+                data_bids.push([price, $scope.offerPaysFundedToHuman(bids[i], true)])
+            }
+        }
+
+        if (asks.length) {
+            var price_max = $scope.offerPriceToHuman(asks[0], true) * 1.3;
+            for (var i = 0; i < asks.length; i++) {
+                var price = $scope.offerPriceToHuman(asks[i], true);
+                if (price > price_max) break;
+                data_asks.push([price, $scope.offerGetsFundedToHuman(asks[i], true)])
+            }
+        }
+
+        $scope.trading.mdchart = new Highcharts.Chart({
+            chart: {
+                type: 'area',
+                renderTo: 'container2',
+                animation: false,
+            },
+            title: {
+                text: null,
+                margin: 0
+            },
+            legend: {
+                enabled: false,
+            },
+            xAxis: {
+                type: 'logarithmic',
+                allowDecimals: true,
+                title: {
+                    text: 'Price'
+                },
+            },
+            yAxis: {
+                title: {
+                    text: 'Volume'
+                },
+                opposite: true,
+            },
+            tooltip: {
+                headerFormat: 'price: {point.x} <br>',
+                pointFormat: 'volume: {point.y} ' + currency,
+            },
+            plotOptions: {
+                area: {
+                    marker: {
+                        enabled: false,
+                        symbol: 'circle',
+                        radius: 2,
+                        states: {
+                            hover: {
+                                enabled: true
+                            }
+                        }
+                    }
+                },
+                series: {
+                    animation: false,
+                }
+            },
+            series: [{ name: 'bids', data: data_bids, color: '#5cb85c' }, { name: 'asks', data: data_asks, color: '#d9534f' }]
+        });
+    }
 
     $scope.drawChart = function() {
 
@@ -1653,10 +2241,11 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
     }
 
     $scope.prepareChart = function(options) {
+        if ($scope.network != 'MAIN') return $scope.trading.chartStatus = 'Historical chart not available for Test Net';
+
         var pair = $scope.trading.pair;
 
         $scope.trading.chartStatus = 'Loading data from ' + RIPPLE_DATA_URL + ' ......';
-        // 'https://data.ripple.com/v2/exchanges/BTC+rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B/XRP?descending=true&result=tesSUCCESS&interval=15minute'
 
         var data_url = RIPPLE_DATA_URL + '/v2/exchanges/' +
             $scope.trading.baseCurrency +
@@ -1670,20 +2259,16 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
 
         $http.get(data_url)
             .success(function(res) {
-                if (pair != $scope.trading.pair) return;
+                if (pair != $scope.trading.pair || $scope.network != 'MAIN') return;
                 var data = res.exchanges;
-                data.sort(function(a, b) {
-                    return Date.parse(a.start) - Date.parse(b.start)
-                });
+                data.sort(function(a, b) { return Date.parse(a.start) - Date.parse(b.start) });
 
                 $scope.trading.chartData = data.concat($scope.trading.chartData);
                 if ($scope.trading.chartPage == 0) $scope.drawChart();
 
                 $scope.trading.chartPage++;
 
-                if (res.marker && $scope.trading.chartPage < CHART_MAX_PAGE) $scope.prepareChart({
-                    marker: res.marker
-                });
+                if (res.marker && $scope.trading.chartPage < CHART_MAX_PAGE) $scope.prepareChart({ marker: res.marker });
                 else if ($scope.trading.chartPage > 1) $scope.drawChart();
 
                 $scope.trading.chartStatus = '';
@@ -1711,6 +2296,36 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         $scope.sellReset();
     }
 
+    $scope.tradingBalancesRefresh = function() {
+        if ($scope.trading.baseCurrency != 'XRP') {
+            $scope.getBalance({
+                currency: $scope.trading.baseCurrency,
+                issuer: $scope.trading.baseIssuer,
+            })
+        }
+        if ($scope.trading.tradeCurrency != 'XRP') {
+            $scope.getBalance({
+                currency: $scope.trading.tradeCurrency,
+                issuer: $scope.trading.tradeIssuer,
+            })
+        }
+    }
+
+    $scope.getBalance = function(opts) {
+        if (typeof opts != 'object') return;
+        if (!opts.currency || !opts.issuer) return;
+        opts.ledger = 'validated';
+        opts.account = $scope.activeAccount;
+        remote.requestRippleBalance(opts, function(err, res) {
+            if (opts.account != $scope.activeAccount) return;
+            if (err) {
+                $scope.accountBalances.IOU[opts.currency + '.' + opts.issuer] = 0;
+            }
+            if (res && res.account_balance) {
+                $scope.accountBalances.IOU[opts.currency + '.' + opts.issuer] = res.account_balance.to_number();
+            }
+        })
+    }
 
     $scope.orderBooksReset = function() {
         $scope.trading.bidOffers = [];
@@ -1721,18 +2336,19 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         $scope.trading.chartData = [];
         try {
             $scope.trading.chart.destroy();
+            $scope.trading.mdchart.destroy();
         } catch (e) {};
 
-        $scope.offersFilterTradePair();
         $scope.loadOrderBooks();
         $scope.prepareChart();
     }
 
     $scope.tradingPageLoad = function() {
         if (!$scope.trading.baseCurrency) $scope.setTradePair($scope.trading.pair);
+        if (!$scope.accountOffers.offers) $scope.getAccountOffers();
     };
 
-    $scope.pairName = function(pair) {
+    $scope.pairName = function(pair, sliced) {
         var base = pair.split('/')[0];
         var trade = pair.split('/')[1];
 
@@ -1741,8 +2357,8 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         var tradeCurrency = trade.split('.')[0];
         var tradeIssuer = trade.split('.')[1];
 
-        var pairname = baseCurrency + (baseIssuer ? '.' + $scope.gatewayName(baseIssuer) : '') + '/' +
-            tradeCurrency + (tradeIssuer ? '.' + $scope.gatewayName(tradeIssuer) : '');
+        var pairname = baseCurrency + (baseIssuer ? '.' + $scope.gatewayName(baseIssuer, sliced) : '') + '/' +
+            tradeCurrency + (tradeIssuer ? '.' + $scope.gatewayName(tradeIssuer, sliced) : '');
         return pairname;
     }
 
@@ -1763,7 +2379,10 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
 
         modalInstance.result.then(function(options) {
             var pair = options.baseCurrency + (options.baseIssuer ? '.' + options.baseIssuer : '') + '/' + options.tradeCurrency + (options.tradeIssuer ? '.' + options.tradeIssuer : '');
-            if (pair != $scope.trading.pair) $scope.setTradePair(pair);
+            if (options.edit && (typeof options.index === 'number')) {
+                $scope.tradepairs[options.index] = pair;
+            }
+            if (options.set && pair != $scope.trading.pair) $scope.setTradePair(pair);
         }, function() {
             // do nothing
         });
@@ -1772,7 +2391,10 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
     $scope.setTradePair = function(pair) {
         $scope.trading.pair = pair;
 
-        if ($scope.tradepairs.indexOf(pair) < 0) $scope.tradepairs.unshift(pair);
+        // swap position to the top of tradepairs-list.
+        var i = $scope.tradepairs.indexOf(pair);
+        if (i >= 0) $scope.deleteTradePair(i);
+        $scope.tradepairs.unshift(pair);
 
         var base = pair.split('/')[0];
         var trade = pair.split('/')[1];
@@ -1782,6 +2404,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         $scope.trading.tradeCurrency = trade.split('.')[0];
         $scope.trading.tradeIssuer = trade.split('.')[1];
 
+        $scope.tradingBalancesRefresh();
         $scope.orderBooksReset();
         $scope.tradingReset();
     }
@@ -1803,6 +2426,13 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         return price;
     }
 
+    $scope.bidPrice = function(offer) {
+        return $scope.offerPriceToHuman(offer);
+    }
+    $scope.askPrice = function(offer) {
+        return $scope.offerPriceToHuman(offer, true);
+    }
+
     $scope.offerGetsCurrency = function(offer) {
         var tgets = offer.TakerGets || offer.taker_gets;
         return (typeof tgets == 'object') ? tgets.currency : 'XRP';
@@ -1810,6 +2440,14 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
     $scope.offerPaysCurrency = function(offer) {
         var tpays = offer.TakerPays || offer.taker_pays;
         return (typeof tpays == 'object') ? tpays.currency : 'XRP';
+    }
+    $scope.offerGetsIssuer = function(offer) {
+        var tgets = offer.TakerGets || offer.taker_gets;
+        return (typeof tgets == 'object') ? tgets.issuer : null;
+    }
+    $scope.offerPaysIssuer = function(offer) {
+        var tpays = offer.TakerPays || offer.taker_pays;
+        return (typeof tpays == 'object') ? tpays.issuer : null;
     }
 
     $scope.offerGetsToHuman = function(offer) {
@@ -1824,16 +2462,16 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         return Number(value);
     }
 
-    $scope.offerGetsFundedToHuman = function(offer) {
+    $scope.offerGetsFundedToHuman = function(offer, sum) {
         var tgets = offer.TakerGets || offer.taker_gets;
-        var funded = offer.taker_gets_funded;
+        var funded = sum ? offer.taker_gets_funded_sum : offer.taker_gets_funded;
         var value = (typeof tgets == 'object') ? funded : funded / 1000000
         return Number(value);
     }
 
-    $scope.offerPaysFundedToHuman = function(offer) {
+    $scope.offerPaysFundedToHuman = function(offer, sum) {
         var tpays = offer.TakerPays || offer.taker_pays;
-        var funded = offer.taker_pays_funded;
+        var funded = sum ? offer.taker_pays_funded_sum : offer.taker_pays_funded;
         var value = (typeof tpays == 'object') ? funded : funded / 1000000
         return Number(value);
     }
@@ -1844,62 +2482,26 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         return (Utils.toTimestamp(offer.expiration) - now) / (60 * 60 * 1000); // hours remaining.    
     }
 
-    $scope.offersFilterTradePair = function(offers) {
-        var offers = offers ? offers : ($scope.accountOffers) ? $scope.accountOffers.all : null;
-        if (!offers) return;
+    $scope.bidFilter = function(offer) {
+        if ($scope.offerPaysCurrency(offer) == $scope.trading.baseCurrency &&
+            $scope.offerPaysIssuer(offer) == $scope.trading.baseIssuer &&
+            $scope.offerGetsCurrency(offer) == $scope.trading.tradeCurrency &&
+            $scope.offerGetsIssuer(offer) == $scope.trading.tradeIssuer
+        ) return true;
+        return false;
+    }
 
-        function tgetsCurrency(offer) {
-            var currency = (typeof offer.taker_gets == 'object') ? offer.taker_gets.currency : 'XRP';
-            return currency;
-        }
-
-        function tpaysCurrency(offer) {
-            var currency = (typeof offer.taker_pays == 'object') ? offer.taker_pays.currency : 'XRP';
-            return currency;
-        }
-
-        function tgetsIssuer(offer) {
-            var currency = (typeof offer.taker_gets == 'object') ? offer.taker_gets.issuer : null;
-            return currency;
-        }
-
-        function tpaysIssuer(offer) {
-            var currency = (typeof offer.taker_pays == 'object') ? offer.taker_pays.issuer : null;
-            return currency;
-        }
-
-        var bidOffers = [],
-            askOffers = [],
-            otherOffers = [];
-
-        offers.filter(function(offer) {
-            if (tgetsCurrency(offer) == $scope.trading.baseCurrency &&
-                tgetsIssuer(offer) == $scope.trading.baseIssuer &&
-                tpaysCurrency(offer) == $scope.trading.tradeCurrency &&
-                tpaysIssuer(offer) == $scope.trading.tradeIssuer) {
-                askOffers.push(offer);
-            } else if (tpaysCurrency(offer) == $scope.trading.baseCurrency &&
-                tpaysIssuer(offer) == $scope.trading.baseIssuer &&
-                tgetsCurrency(offer) == $scope.trading.tradeCurrency &&
-                tgetsIssuer(offer) == $scope.trading.tradeIssuer) {
-                bidOffers.push(offer);
-            } else {
-                otherOffers.push(offer);
-            }
-        });
-
-        if (!$scope.accountOffers) $scope.accountOffers = {};
-        $scope.accountOffers.all = offers;
-        $scope.accountOffers.bid = bidOffers;
-        $scope.accountOffers.ask = askOffers;
-        $scope.accountOffers.other = otherOffers;
-
-        $scope.trading.getOfferStatus = (bidOffers.length == 0 && askOffers.length == 0) ? 'No outstanding offers for this Trade-pair.' : '';
+    $scope.askFilter = function(offer) {
+        if ($scope.offerGetsCurrency(offer) == $scope.trading.baseCurrency &&
+            $scope.offerGetsIssuer(offer) == $scope.trading.baseIssuer &&
+            $scope.offerPaysCurrency(offer) == $scope.trading.tradeCurrency &&
+            $scope.offerPaysIssuer(offer) == $scope.trading.tradeIssuer
+        ) return true;
+        return false;
     }
 
     $scope.getAccountOffers = function() {
         $scope.accountOffers = {};
-        $scope.trading.getOfferStatus = 'Refreshing...';
         $scope.accountOffers.status = 'Refreshing...';
 
         var options = {
@@ -1914,22 +2516,16 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
                     if (account != $scope.walletAccount._account_id) return;
                     if (err.remote.error) {
                         $scope.accountOffers.status = err.remote.error;
-                        $scope.trading.getOfferStatus = err.remote.error;
                     }
-                } else {
-                    $scope.accountOffers.status = err.error;
-                    $scope.trading.getOfferStatus = err.error;
-                }
+                } else { $scope.accountOffers.status = err.error; }
             }
             if (res) {
                 if (res.account != $scope.activeAccount) return;
-                $scope.accountOffers.status = 'Updated @ Ledger:' + res.ledger_index;
+                $scope.accountOffers.status = 'Updated @ Ledger: ' + res.ledger_index;
                 $scope.accountOffers.ledger_index = res.ledger_index;
-
-                var offers = res.offers;
-                $scope.offersFilterTradePair(offers);
+                $scope.accountOffers.offers = res.offers;
             }
-            //$scope.$apply();
+            $scope.$apply();
         })
     }
 
@@ -1946,9 +2542,15 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
             var tpays = $scope.offerPaysCurrency(offer);
             options.baseCurrency = (options.type == 'sell') ? tgets : tpays;
             options.tradeCurrency = (options.type == 'sell') ? tpays : tgets;
+            var tgets_issuer = $scope.offerGetsIssuer(offer);
+            var tpays_issuer = $scope.offerPaysIssuer(offer);
+            options.baseIssuer = (options.type == 'sell') ? tgets_issuer : tpays_issuer;
+            options.tradeIssuer = (options.type == 'sell') ? tpays_issuer : tgets_issuer;
         } else {
             options.baseCurrency = $scope.trading.baseCurrency;
             options.tradeCurrency = $scope.trading.tradeCurrency;
+            options.baseIssuer = $scope.trading.baseIssuer;
+            options.tradeIssuer = $scope.trading.tradeIssuer;
         }
 
         if (offer.expiration) {
@@ -2024,11 +2626,10 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
             offer_sequence: seq,
         });
 
-        $scope.tradingLog = {};
-        $scope.submitTransaction({
-            transaction: transaction,
-            log: $scope.tradingLog
-        });
+        var alert = { description: 'Deleting offer seq-' + seq };
+        $scope.alerts.trading.push(alert);
+        $scope.alerts.offer.push(alert);
+        $scope.submitTransaction({ transaction: transaction, log: alert });
     }
 
     $scope.getMarketPrice = function() {
@@ -2044,7 +2645,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
     }
 
     $scope.priceAlert = function(options) {
-        if (!options.market_price || !options.price) return false;
+        if (!DEVIATION_ALERT || !options.market_price || !options.price) return false;
         return (Math.abs(options.price - options.market_price) / options.market_price) > DEVIATION_ALERT;
     }
 
@@ -2060,6 +2661,8 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         }
         options.baseCurrency = $scope.trading.baseCurrency;
         options.tradeCurrency = $scope.trading.tradeCurrency;
+        options.baseIssuer = $scope.trading.baseIssuer;
+        options.tradeIssuer = $scope.trading.tradeIssuer;
 
         options.market_price = $scope.getMarketPrice();
 
@@ -2098,25 +2701,30 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         var price = options.price;
         var expiration = options.expiration;
 
-        var pair = $scope.trading.pair;
+        var baseCurrency = options.baseCurrency;
+        var baseIssuer = options.baseIssuer;
+        var tradeCurrency = options.tradeCurrency;
+        var tradeIssuer = options.tradeIssuer;
 
-        var base_amount = ($scope.trading.baseCurrency == 'XRP') ?
+        var base_amount = (baseCurrency == 'XRP') ?
             String(Math.round(qty * 1000000)) : {
-                "currency": $scope.trading.baseCurrency,
-                "issuer": $scope.trading.baseIssuer,
-                "value": qty
+                "currency": baseCurrency,
+                "issuer": baseIssuer,
+                "value": String(qty)
             }
 
-        var trade_amount = ($scope.trading.tradeCurrency == 'XRP') ?
+        var trade_amount = (tradeCurrency == 'XRP') ?
             String(Math.round(qty * price * 1000000)) : {
-                "currency": $scope.trading.tradeCurrency,
-                "issuer": $scope.trading.tradeIssuer,
-                "value": qty * price
+                "currency": tradeCurrency,
+                "issuer": tradeIssuer,
+                "value": String(qty * price)
             }
 
         if (expiration) {
             var now = new Date();
             expiration = new Date(now.getTime() + (options.expiration * 60 * 60 * 1000));
+        } else {
+            expiration = undefined;
         }
 
         var transaction = remote.transaction();
@@ -2131,11 +2739,10 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
 
         if (options.type == 'sell') transaction.setFlags('Sell');
 
-        $scope.tradingLog = {};
-        $scope.submitTransaction({
-            transaction: transaction,
-            log: $scope.tradingLog
-        });
+        var alert = { description: options.offer_sequence ? 'Modifying offer seq-' + options.offer_sequence : 'Creating new ' + options.type + ' offer' };
+        $scope.alerts.trading.push(alert);
+        $scope.alerts.offer.push(alert);
+        $scope.submitTransaction({ transaction: transaction, log: alert });
     }
 
     $scope.loadOrderBooks = function() {
@@ -2165,24 +2772,33 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
 
         $scope.trading.bookAsk.on('model', function(offers) {
             $scope.trading.ask_status = 'updated on ledger ' + (remote.getLedgerSequence() - 1);
+            $scope.offersCalculateSum(offers);
             $scope.trading.askOffers = offers;
+            $scope.drawMarketDepth();
         })
 
         $scope.trading.bookBid.on('model', function(offers) {
             $scope.trading.bid_status = 'updated on ledger ' + (remote.getLedgerSequence() - 1);
+            $scope.offersCalculateSum(offers);
             $scope.trading.bidOffers = offers;
+            $scope.drawMarketDepth();
         })
     }
 
-    $scope.offerPageLoad = function() {
-        if (!$scope.walletAccount) {
-            // $scope.setWalletAccount({
-            //     address: DEFAULT_ACCOUNT,
-            //     secret: DEFAULT_SECRET
-            // });
-            return;
+    $scope.offersCalculateSum = function(offers) {
+        if (!Array.isArray(offers)) return;
+        sum_get = 0;
+        sum_pay = 0;
+        for (var i = 0, l = offers.length; i < l; i++) {
+            sum_get += Number(offers[i].taker_gets_funded);
+            sum_pay += Number(offers[i].taker_pays_funded);
+            offers[i].taker_gets_funded_sum = sum_get;
+            offers[i].taker_pays_funded_sum = sum_pay;
         }
-        if (!$scope.accountOffers.all) $scope.getAccountOffers();
+    }
+
+    $scope.offerPageLoad = function() {
+        if (!$scope.accountOffers.offers) $scope.getAccountOffers();
     }
 
     $scope.offerIsSell = function(offer) {
@@ -2190,6 +2806,428 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         return (offer.flags & Remote.flags['offer']['Sell']) ? true : false;
     }
 
+    $scope.transactionHistory = function(refresh) {
+        var account = $scope.activeAccount;
+        if (refresh || !$scope.walletAccount.history) $scope.walletAccount.history = [];
+
+        var params = {
+            account: account,
+            ledger_index_min: -1,
+            ledger_index_max: -1,
+            limit: 20,
+            binary: false,
+            marker: refresh ? undefined : $scope.walletAccount.tx_marker
+        };
+
+        $scope.transactionHistoryStatus = 'Loading...';
+        remote.requestAccountTransactions(params, function(err, data) {
+            if (err) return;
+            if (!data || data.account != $scope.activeAccount) return;
+            var history = $scope.walletAccount.history;
+            for (var i = 0; i < data.transactions.length; i++) {
+                var tx = $scope.processTxn(data.transactions[i], account);
+                if (tx) history.push(tx);
+            }
+
+            if (data.marker) {
+                $scope.walletAccount.tx_marker = data.marker;
+                $scope.transactionHistoryStatus = 'Loaded';
+            } else {
+                $scope.transactionHistoryStatus = 'Full';
+            }
+
+            $scope.walletAccount.history = history;
+            $scope.$apply();
+        }).request();
+    }
+
+    $scope.processTxn = function(transaction, account) {
+        var txn = transaction.tx || transaction.transaction;
+        var meta = transaction.meta || transaction.metadata;
+
+        function filterEffects(tx) {
+            if (!Array.isArray(tx.effects)) return;
+
+            var effects = [];
+            var balance_effects = [];
+
+            for (var i = 0; i < tx.effects.length; i++) {
+                var effect = tx.effects[i];
+                switch (effect.type) {
+                    case 'offer_funded':
+                    case 'offer_partially_funded':
+                    case 'offer_bought':
+                    case 'offer_cancelled':
+                    case 'offer_created':
+                    case 'regular_key_added':
+                    case 'regular_key_changed':
+                    case 'regular_key_removed':
+                        effects.push(effect);
+                        break;
+
+                        //case 'fee':
+                    case 'balance_change':
+                    case 'trust_change_balance':
+                        balance_effects.push(effect)
+                        break;
+                }
+                if (effect.type == 'trust_change_balance' && effect.balance) {
+                    $scope.accountBalances.IOU[effect.currency + '.' + effect.counterparty] = effect.balance.to_number();
+                }
+            }
+            //sort offer effects
+            var index = { 'offer_cancelled': 1, 'offer_funded': 2, 'offer_bought': 3, 'offer_partially_funded': 4, 'offer_created': 5 }
+            effects.sort(function(a, b) { return (index[a.type] && index[b.type]) ? (index[a.type] - index[b.type]) : 0; })
+
+            tx.showEffects = effects;
+            tx.balanceEffects = balance_effects;
+        }
+
+        var tx = JsonRewriter.processTxn(txn, meta, account);
+        if (tx) filterEffects(tx);
+        return tx;
+    }
+
+    $scope.historyPageLoad = function() {
+        if (!$scope.walletAccount.history) $scope.transactionHistory();
+    }
+
+    $scope.updateOffers = function(tx) {
+        if (!$scope.accountOffers.offers) $scope.accountOffers.offers = [];
+        var offers = $scope.accountOffers.offers;
+
+        function modifyOffer(effect) {
+            var newFields = {
+                taker_gets: effect.gets,
+                taker_pays: effect.pays
+            }
+            var offer = offers.find(function(offer) { return offer.seq == effect.seq; });
+            if (offer) Object.assign(offer, newFields);
+        }
+
+        function deleteOffer(effect) {
+            var i = offers.findIndex(function(offer) { return offer.seq == effect.seq; })
+            if (i >= 0) offers.splice(i, 1);
+        }
+
+        function addOffer(effect) {
+            offers.push({
+                expiration: effect.expiration,
+                flags: effect.flags || 0,
+                seq: effect.seq,
+                taker_gets: effect.gets.to_json(),
+                taker_pays: effect.pays.to_json(),
+                quality: effect.pays.divide(effect.gets).to_text()
+            });
+        }
+
+        tx.effects.forEach(function(effect) {
+            switch (effect.type) {
+                case 'offer_created':
+                    addOffer(effect)
+                    break;
+                case 'offer_partially_funded':
+                    if (!effect.deleted) {
+                        modifyOffer(effect);
+                        break;
+                    } //else fall through
+                case 'offer_funded':
+                case 'offer_cancelled':
+                    deleteOffer(effect);
+                    break;
+            }
+        })
+    }
+
+    $scope.updateLines = function(tx) {
+        if (!$scope.trustlines) return;
+
+        var settings = [
+            'freeze', 'freeze_peer',
+            'no_ripple', 'no_ripple_peer',
+            'authorized', 'peer_authorized',
+        ]
+
+        function modifyLine(effect) {
+            var newFields = {
+                balance: effect.balance.to_text(),
+                limit: effect.limit.to_text(),
+                limit_peer: effect.limit_peer.to_text(),
+                quality_in: effect.quality_in,
+                quality_out: effect.quality_out,
+            }
+            settings.forEach(function(s) {
+                newFields[s] = effect[s];
+            })
+            var line = $scope.trustlines.find(function(line) {
+                return line.account === effect.counterparty && line.currency === effect.currency;
+            });
+            if (line) Object.assign(line, newFields);
+        }
+
+        function deleteLine(effect) {
+            var i = $scope.trustlines.findIndex(function(line) {
+                return line.account === effect.counterparty && line.currency === effect.currency;
+            })
+            if (i >= 0) $scope.trustlines.splice(i, 1);
+        }
+
+        function addLine(effect) {
+            var line = {
+                account: effect.counterparty,
+                currency: effect.currency,
+                balance: effect.balance.to_text(),
+                limit: effect.limit.to_text(),
+                limit_peer: effect.limit_peer.to_text(),
+                quality_in: effect.quality_in,
+                quality_out: effect.quality_out,
+            };
+            settings.forEach(function(s) {
+                line[s] = effect[s];
+            })
+            $scope.trustlines.push(line)
+        }
+
+        tx.effects.forEach(function(effect) {
+            if (effect.deleted) return deleteLine(effect);
+
+            switch (effect.type) {
+                case 'trust_create_local':
+                case 'trust_create_remote':
+                    addLine(effect)
+                    break;
+                case 'trust_change_balance':
+                case 'trust_change_remote':
+                case 'trust_change_local':
+                case 'trust_change_flags':
+                    modifyLine(effect);
+            }
+        })
+    }
+
+    $scope.handleTransaction = function(tx) {
+        if (!tx.validated) return;
+        if (!$scope.walletAccount.history) $scope.walletAccount.history = [];
+
+        var tx = $scope.processTxn(tx, $scope.walletAccount._account_id);
+        if (!tx) return;
+
+        $scope.walletAccount.history.unshift(tx);
+        $scope.updateOffers(tx);
+        $scope.updateLines(tx);
+    }
+
+    $scope.editTradePair = function(pair, index) {
+        var base = pair.split('/')[0];
+        var trade = pair.split('/')[1];
+        var opts = {
+            baseCurrency: base.split('.')[0],
+            baseIssuer: base.split('.')[1],
+            tradeCurrency: trade.split('.')[0],
+            tradeIssuer: trade.split('.')[1],
+        };
+        opts.index = index;
+        opts.edit = true;
+        $scope.prepareTradePair(opts);
+    }
+
+    $scope.deleteTradePair = function(index) {
+        $scope.tradepairs.splice(index, 1);
+    }
+
+    $scope.addGateway = function(options) {
+        var modalInstance = $uibModal.open({
+            animation: false,
+            templateUrl: 'templetes/modal-add-gateway.html',
+            controller: 'ModalCtrl',
+            scope: $scope,
+            resolve: {
+                options: function() {
+                    return options;
+                }
+            }
+        });
+
+        modalInstance.result.then(function(options) {
+            var newGateway = {
+                name: options.name,
+                address: options.address,
+                currencies: options.currencies.trim().split(/,\s*/),
+            }
+            if (options.edit && (typeof options.index === 'number')) {
+                $scope.gateways[options.index] = newGateway;
+            } else {
+                options.index = $scope.gateways.length;
+                $scope.gateways.push(newGateway);
+            }
+        }, function() {
+            // do nothing
+        });
+    }
+
+    $scope.isDuplicateGateway = function(gateway) {
+        var gateways = $scope.gateways;
+        for (var i = 0, l = gateways.length; i < l; i++) {
+            if (i === gateway.index) continue;
+            var g = gateways[i];
+            if (g.name === gateway.name || g.address === gateway.address) return true;
+        }
+        return false;
+    }
+
+    $scope.editGateway = function(gateway, index) {
+        var opts = JSON.parse(JSON.stringify(gateway)); // make a copy.
+        opts.currencies = gateway.currencies.join(', ');
+        opts.index = $scope.gateways.findIndex(function(g) {
+            return g.address === gateway.address;
+        });
+        opts.edit = true;
+        $scope.addGateway(opts);
+    }
+
+    $scope.deleteGateway = function(gateway) {
+        var index = $scope.gateways.findIndex(function(g) {
+            return g.address === gateway.address;
+        });
+        $scope.gateways.splice(index, 1);
+    }
+
+    $scope.addServer = function(options) {
+        var modalInstance = $uibModal.open({
+            animation: false,
+            templateUrl: 'templetes/modal-add-server.html',
+            controller: 'ModalCtrl',
+            scope: $scope,
+            resolve: {
+                options: function() {
+                    return options;
+                }
+            }
+        });
+
+        modalInstance.result.then(function(options) {
+            var newServer = {
+                host: options.server,
+                port: options.port,
+                secure: options.secure,
+                primary: options.primary
+            }
+            if (options.primary) {
+                for (var i = 0, l = $scope.servers.length; i < l; i++) {
+                    $scope.servers[i].primary = false;
+                }
+            }
+            if (options.edit && (typeof options.index === 'number')) {
+                $scope.servers[options.index] = options;
+            } else {
+                $scope.servers.push(options);
+            }
+        }, function() {
+            // do nothing
+        });
+    }
+
+    $scope.editServer = function(server, index) {
+        var opts = JSON.parse(JSON.stringify(server)); // make a copy.
+        opts.index = index;
+        opts.edit = true;
+        $scope.addServer(opts);
+    }
+
+    $scope.deleteServer = function(index) {
+        $scope.servers.splice(index, 1);
+    }
+
+    $scope.editConfig = function() {
+        var options = {
+            slipage: $localStorage.slipage,
+            fee_cushion: $localStorage.fee_cushion,
+            orderbook_limit: $localStorage.orderbook_limit,
+            last_ledger_offset: $localStorage.last_ledger_offset,
+            max_fee: ($localStorage.max_fee) / 1000000,
+            address: $localStorage.account.address,
+        }
+
+        var modalInstance = $uibModal.open({
+            animation: false,
+            templateUrl: 'templetes/modal-config.html',
+            controller: 'ModalCtrl',
+            scope: $scope,
+            resolve: {
+                options: function() {
+                    return options;
+                }
+            }
+        });
+
+        modalInstance.result.then(function(options) {
+            $localStorage.account = { address: options.address };
+            $localStorage.max_fee = Math.ceil(options.max_fee * 1000000);
+            $localStorage.last_ledger_offset = options.last_ledger_offset;
+            $localStorage.orderbook_limit = options.orderbook_limit;
+            $localStorage.fee_cushion = options.fee_cushion;
+            $localStorage.slipage = options.slipage;
+        }, function() {
+            // do nothing
+        });
+    }
+
+    $scope.addContact = function(options) {
+        var modalInstance = $uibModal.open({
+            animation: false,
+            templateUrl: 'templetes/modal-add-contact.html',
+            controller: 'ModalCtrl',
+            scope: $scope,
+            resolve: {
+                options: function() {
+                    return options;
+                }
+            }
+        });
+
+        modalInstance.result.then(function(options) {
+            var newContact = {
+                name: options.name,
+                address: options.address,
+                dtag: options.dtag,
+            }
+            if (options.edit && (typeof options.index === 'number')) {
+                $scope.contacts[options.index] = newContact;
+            } else {
+                options.index = $scope.contacts.length;
+                $scope.contacts.push(newContact);
+            }
+        }, function() {
+            // do nothing
+        });
+    }
+
+    $scope.isDuplicateContact = function(contact) {
+        var contacts = $scope.contacts;
+        for (var i = 0, l = contacts.length; i < l; i++) {
+            if (i === contact.index) continue;
+            var c = contacts[i];
+            if (c.name === contact.name) return true;
+            if (c.address === contact.address && c.dtag == contact.dtag) return true;
+        }
+        return false;
+    }
+
+    $scope.editContact = function(contact, index) {
+        var opts = JSON.parse(JSON.stringify(contact)); // make a copy.
+        opts.index = $scope.contacts.findIndex(function(c) {
+            return c.name === contact.name;
+        });
+        opts.edit = true;
+        $scope.addContact(opts);
+    }
+
+    $scope.deleteContact = function(contact) {
+        var index = $scope.contacts.findIndex(function(c) {
+            return c.name === contact.name;
+        });
+        $scope.contacts.splice(index, 1);
+    }
 }]); // main controller;
 
 
@@ -2222,6 +3260,30 @@ walletApp.controller('ModalCtrl', ['$scope', '$uibModalInstance', 'options', fun
 
 // ============== directive ============================
 
+walletApp.directive('rippleValidRecipient', function() {
+    return {
+        require: 'ngModel',
+        link: function(scope, element, attr, ctrl) {
+            ctrl.$validators.rippleValidRecipient = function(modelValue, viewValue) {
+                if (ctrl.$isEmpty(modelValue)) {
+                    return true;
+                }
+                // ripple address
+                if (UInt160.is_valid(modelValue)) return true;
+
+                // ripplename;
+                var ripplename_regex = /^~[a-zA-Z0-9]([\-]?[a-zA-Z0-9]){0,19}$/;
+                if (modelValue.length > 1 && modelValue[0] == '~') return ripplename_regex.test(modelValue);
+
+                // checking for email type address (e.g.xyz@domain.com)
+                var domain_split = modelValue.search(/@([\w-]+\.)+[\w-]{2,}$/);
+                if (domain_split <= 0) return false;
+                return true;
+            }
+        }
+    }
+});
+
 walletApp.directive('rippleValidAddress', function() {
     return {
         require: 'ngModel',
@@ -2242,8 +3304,9 @@ walletApp.directive('rippleValidSecret', function() {
         link: function(scope, element, attr, ctrl) {
             ctrl.$validators.rippleValidSecret = function(modelValue, viewValue) {
                 if (ctrl.$isEmpty(modelValue)) return true;
-
-                return (modelValue[0] == 's' && Seed.from_json(modelValue).is_valid())
+                if (Seed.is_valid(modelValue)) return true;
+                if (KeyPair.is_valid(modelValue)) return true;
+                return false;
             }
         }
     }
@@ -2296,7 +3359,7 @@ walletApp.directive('uint32', function() {
     return {
         require: 'ngModel',
         link: function(scope, element, attr, ctrl) {
-            ctrl.$validators.positiveNumber = function(modelValue, viewValue) {
+            ctrl.$validators.uint32 = function(modelValue, viewValue) {
                 if (ctrl.$isEmpty(modelValue)) {
                     return true;
                 }
@@ -2304,6 +3367,29 @@ walletApp.directive('uint32', function() {
                 if (/^\d+$/.test(modelValue)) {
                     var value = Number(modelValue);
                     if (value >= 0 && value <= 4294967295) return true;
+                }
+
+                return false;
+            }
+        }
+    }
+});
+
+walletApp.directive('xrpDrops', function() {
+    return {
+        require: 'ngModel',
+        link: function(scope, element, attr, ctrl) {
+            ctrl.$validators.xrpDrops = function(modelValue, viewValue) {
+                if (ctrl.$isEmpty(modelValue)) {
+                    return true;
+                }
+                if (typeof modelValue == 'object') {
+                    return true;
+                }
+
+                if (/^\d+$/.test(modelValue)) {
+                    var value = Number(modelValue);
+                    if (value > 0 && value < 1e17) return true;
                 }
 
                 return false;
@@ -2320,6 +3406,36 @@ walletApp.directive('rippleValidMemo', function() {
                 if (ctrl.$isEmpty(modelValue)) return true;
                 else return /^[0-9A-Za-z\-._~:/?#[\]@!$&'()*+,;=%]+$/.test(modelValue); // url characters '
             }
+        }
+    }
+});
+
+walletApp.directive('uppercaseOnly', function() {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function(scope, element, attr, ctrl) {
+            function parser(value) {
+                if (ctrl.$isEmpty(value)) {
+                    return value;
+                }
+                var formatedValue = value.toUpperCase();
+                if (ctrl.$viewValue !== formatedValue) {
+                    ctrl.$setViewValue(formatedValue);
+                    ctrl.$render();
+                }
+                return formatedValue;
+            }
+
+            function formatter(value) {
+                if (ctrl.$isEmpty(value)) {
+                    return value;
+                }
+                return value.toUpperCase();
+            }
+
+            ctrl.$parsers.push(parser);
+            parser(scope[attr.ngModel]);
         }
     }
 });

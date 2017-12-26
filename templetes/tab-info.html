@@ -1,7 +1,7 @@
 <div id="tabInfo">
     <div class="card" style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;">
         <h4 class="card-title">{{ 'Account' | translate }} {{activeAccount ? activeAccount : "-"}}</h4>
-        <button class="btn btn-warning" ng-click="accountInfo();accountLines(); search.currency='';" ng-disabled="!activeAccount">{{ 'Refresh' | translate }}</button> <br>{{accountInfoStatus}}<br>
+        <button type="button" class="btn btn-warning" ng-click="accountInfo();accountLines(); search.currency='';" ng-disabled="!activeAccount">{{ 'Refresh' | translate }}</button> <br>{{accountInfoStatus}}<br>
         <a class="btn btn-info" data-toggle="collapse" href="#infoopt" aria-expanded="false" aria-controls="infoopt">{{ 'Advanced' | translate }}</a>
         <div class="collapse" id="infoopt">
             <div style="padding-left:1em">
@@ -59,6 +59,22 @@
                 <td>{{accountData.Sequence}}</td>
             </tr>
             <tr>
+                <td>Signers</td>
+                <td>
+                    {{accountData['signers'] ? '' : '-'}}
+                    <table style="table-layout:fixed" class="table table-hover">
+                        <tr ng-repeat="signer in accountData['signers']">
+                            <td>{{signer.address}}</td>
+                            <td>{{signer.weight}}</td>
+                        </tr>
+                        <tr ng-hide="! accountData['quorum']">
+                            <td>Quorum : </td>
+                            <td>{{accountData['quorum'] ? accountData['quorum'] : '-'}}</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
                 <td>Message Key</td>
                 <td>{{accountData.MessageKey ? accountData.MessageKey : '-'}}</td>
             </tr>
@@ -73,6 +89,7 @@
         <div class="collapse" id="infoopt1">
             <div style="padding-left:1em">
                 <button type="button" class="btn btn-info" ng-click="prepareSetRegularKey()">{{ 'Set_RegularKey' | translate }}</button>
+                <button type="button" class="btn btn-info" ng-click="prepareSetSignerList()">Set Signer List</button>
                 <button type="button" class="btn btn-info" ng-click="prepareAccountSet({modal: 'info'})">{{ 'Edit_Info' | translate }}</button>
                 <button type="button" class="btn btn-info" ng-click="prepareAccountSet({modal: 'flags'})">{{ 'Edit_Flags' | translate }}</button>
                 <button class="btn btn-info" ng-click="prepareSetWalletSecret()">{{'Set_Secret'|translate}}</button><br>
@@ -83,9 +100,11 @@
         </div>
     </div>
 
-    <div ng-show="accountSetLog.status" class="card {{accountSetLog.status == 'FINAL' ? (accountSetLog.status_code.slice(0,3) == 'tes' ? 'card-success' : 'card-danger') : 'card-warning'}}" style="margin: 1em;padding:2em;word-wrap: break-word;  overflow:auto;">
-
-        <b>Tx Status:</b>[{{accountSetLog.status}}{{accountSetLog.status_code ? ', ' + accountSetLog.status_code : ''}}],
-        <b>Result:</b> {{accountSetLog.result}} {{accountSetLog.tx_hash ? ', tx_hash: ' + accountSetLog.tx_hash : ''}}
+    <div uib-alert ng-repeat="alert in alerts.account" class="alert-{{alert.status == 'FINAL' ? (alert.status_code.slice(0,3) == 'tes' ? 'success' : 'danger') : 'warning'}}" close="closeAlert('account', $index)" dismiss-on-timeout="30000">
+        {{alert.description}} <br>
+        <b>Status:</b>[{{alert.status}}{{alert.status_code ? ', ' + alert.status_code : ''}}],
+        <b>Result:</b> {{alert.result}} <br> {{alert.tx_hash ? 'tx_hash: ' + alert.tx_hash : ''}}
     </div>
+
+
 </div>
