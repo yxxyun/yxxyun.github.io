@@ -360,7 +360,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
     };
     $scope.qrSecret = function() {
 
-        return qrsec;
+        return atob(qrsec);
     };
 
 
@@ -1051,6 +1051,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
                 }
                 if (!key || !(key.is_valid())) return;
                 options.secret = secret;
+                options.secretqr = btoa(secret);
                 options.index = index;
                 options.address = key.to_address_string();
             }
