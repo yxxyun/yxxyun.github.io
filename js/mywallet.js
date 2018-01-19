@@ -353,14 +353,14 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
     $scope.changeLanguage = function(langKey) {
         $translate.use(langKey);
     };
-    var qr = new QrCode();
-    var qrsec;
-    qr.callback = function(result) {
-        qrsec = result;
+    $scope.qr = new QrCode();
+
+    $scope.qr.callback = function(result) {
+        $scope.qrsec = result;
     };
     $scope.qrSecret = function() {
 
-        return atob(qrsec);
+        return atob($scope.qrsec);
     };
 
 
@@ -370,7 +370,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
             var photofile = element.files[0];
             var reader = new FileReader();
             reader.onload = function(e) {
-                qr.decode(this.result); // handle onload
+                scope.qr.decode(this.result); // handle onload
             };
             reader.readAsDataURL(photofile);
         });
