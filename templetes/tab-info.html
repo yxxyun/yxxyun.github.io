@@ -92,7 +92,8 @@
                 <button type="button" class="btn btn-info" ng-click="prepareSetSignerList()">Set Signer List</button>
                 <button type="button" class="btn btn-info" ng-click="prepareAccountSet({modal: 'info'})">{{ 'Edit_Info' | translate }}</button>
                 <button type="button" class="btn btn-info" ng-click="prepareAccountSet({modal: 'flags'})">{{ 'Edit_Flags' | translate }}</button>
-                <button class="btn btn-info" ng-click="prepareSetWalletSecret()">{{'Set_Secret'|translate}}</button><br>
+                <button class="btn btn-info" ng-click="prepareSetWalletSecret()">{{'Set_Secret'|translate}}</button>
+                <button type="button" class="btn btn-info" ng-click="encryptsecretBlobSave()">{{'encryptsecret'|translate}}</button><br>
                 <button class="btn btn-info" ng-show="remote.secrets[activeAccount]" ng-click="showSecret = !showSecret">{{'SH_secret'|translate}}</button><br>
                 <div><span style="float:left">
                 {{remote.secrets[activeAccount] && showSecret ? remote.secrets[activeAccount] : '' }}</span></div>

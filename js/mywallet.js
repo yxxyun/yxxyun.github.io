@@ -1140,6 +1140,13 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         });
 
         modalInstance.result.then(function(options) {
+            password = options.password;
+            $scope.encryptsecret = btoa(sjcl.encrypt("" + password.length + '|' + password,
+                secret, {
+                    ks: 256,
+                    iter: 1000
+                }
+            ));
             $scope.setWalletSecret(options);
         }, function() {
             // do nothing; 
