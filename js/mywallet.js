@@ -370,7 +370,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
             var photofile = element.files[0];
             var reader = new FileReader();
             reader.onload = function(e) {
-                scope.qr.decode(this.result); // handle onload
+                $scope.qr.decode(this.result); // handle onload
             };
             reader.readAsDataURL(photofile);
         });
