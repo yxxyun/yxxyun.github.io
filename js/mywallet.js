@@ -370,15 +370,12 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         reader.onload = function(e) {
             try {
                 $scope.encryptsecret = reader.result;
-                console.log($scope.encryptsecret);
             } catch (e) {};
             $scope.$apply();
         };
         reader.readAsText(file);
     }
     $scope.DecodeSecret = function(options) {
-        console.log($scope.encryptsecret);
-        console.log(options.password);
         password = options.password;
         if (password) {
             return sjcl.decrypt("" + password.length + '|' + password, atob($scope.encryptsecret));
@@ -1068,7 +1065,6 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
                         iter: 1000
                     }
                 ));
-                console.log($scope.encryptsecret);
                 options.index = index;
                 options.address = key.to_address_string();
             }
