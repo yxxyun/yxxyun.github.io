@@ -1,4 +1,4 @@
-var walletApp = angular.module('walletApp', ['ui.bootstrap', 'jsonFormatter', 'ngStorage', 'monospaced.qrcode', 'ngCookies', 'pascalprecht.translate', ]);
+var walletApp = angular.module('walletApp', ['ui.bootstrap', 'jsonFormatter', 'ngStorage', 'ngCookies', 'pascalprecht.translate', ]);
 var translationsEN = {
     Ripple_Wallet: 'Ripple Wallet',
     Network: 'Network',
@@ -18,12 +18,11 @@ var translationsEN = {
     Address: 'Address',
     Idinput_holder: 'enter address or click use secret key',
     Invalid: 'Invalid',
-    Save_secret: 'click QR image to download',
     Use_secret: 'use secretkey',
     Submit: 'Submit',
     Cancel: 'Cancel',
     Set_Secret: 'Set Wallet Secret',
-    Enter_Secret: 'enter secret or select QR image',
+    Enter_Secret: 'enter secret or click import encrypted secret',
     Refresh: 'Refresh',
     Advanced: 'Advanced',
     Set_RegularKey: 'Set RegularKey',
@@ -68,14 +67,18 @@ var translationsEN = {
     DT: 'Destination Tag:',
     Value: 'Value',
     Issuer: 'Issuer',
-    SELQR: 'select QR',
-    RDQR: 'read secret',
     Random: 'New Random Secret',
     SH_secret: 'Show Secret',
     History: "History",
     Settings: "Settings",
     Total: "Total",
     Tools: "Tools",
+    Password: "Password",
+    Enter_password: "Enter password",
+    Import_encryptsecretfile: "Import encrypted secret",
+    DecodeSecret: "Decode Secret",
+    encryptsecret: "Export encrypted secret",
+    Save_to_File: "Save to File",
 };
 
 var translationsCN = {
@@ -97,12 +100,11 @@ var translationsCN = {
     Address: 'Ripple地址',
     Idinput_holder: '输入Ripple地址或点击使用密钥',
     Invalid: '无效',
-    Save_secret: '点击QR下载密钥',
     Use_secret: '使用密钥',
     Submit: '提交',
     Cancel: '取消',
     Set_Secret: '设置密钥',
-    Enter_Secret: '输入密钥或选择密钥QR',
+    Enter_Secret: '输入密钥或选择导入加密密钥',
     Refresh: '刷新',
     Advanced: '高级',
     Set_RegularKey: '设置RegularKey',
@@ -147,14 +149,18 @@ var translationsCN = {
     DT: '终端标签:',
     Value: '值',
     Issuer: '发行方',
-    SELQR: '选择 QR',
-    RDQR: '读取密钥',
     Random: '新生成密钥',
     SH_secret: '显示密钥',
     History: "历史记录",
     Settings: "设置",
     Total: "共",
     Tools: "工具",
+    Password: "密码",
+    Enter_password: "输入密码",
+    Import_encryptsecretfile: "导入加密密钥",
+    DecodeSecret: "解密密钥",
+    encryptsecret: "导出加密密钥",
+    Save_to_File: "保存",
 };
 var Remote = ripple.Remote;
 var Seed = ripple.Seed;
@@ -353,28 +359,32 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
     $scope.changeLanguage = function(langKey) {
         $translate.use(langKey);
     };
-    $scope.qr = new QrCode();
 
-    $scope.qr.callback = function(result) {
-        $scope.qrsec = result;
+    $scope.encryptsecretBlobSave = function() {
+        var blob = new Blob([$scope.encryptsecret], { type: "text/plain;charset=utf-8" });
+        saveAs(blob, 'encryptsecret.txt');
+    }
+    $scope.encryptsecretImport = function(element) {
+        var file = element.files[0];
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                $scope.encryptsecret = reader.result;
+                console.log($scope.encryptsecret);
+            } catch (e) {};
+            $scope.$apply();
+        };
+        reader.readAsText(file);
+    }
+    $scope.DecodeSecret = function(options) {
+        console.log($scope.encryptsecret);
+        console.log(options.password);
+        password = options.password;
+        if (password) {
+            return sjcl.decrypt("" + password.length + '|' + password, atob($scope.encryptsecret));
+        }
     };
-    $scope.qrSecret = function() {
 
-        return atob($scope.qrsec);
-    };
-
-
-    $scope.file_changed = function(element) {
-
-        $scope.$apply(function(scope) {
-            var photofile = element.files[0];
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                $scope.qr.decode(this.result); // handle onload
-            };
-            reader.readAsDataURL(photofile);
-        });
-    };
     $scope.$storage = $localStorage.$default(DEFAULT);
 
     var remote = new Remote({
@@ -1040,8 +1050,9 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
         modalInstance.result.then(function(new_options) {
             var secret = new_options.secret;
             var index = Number(new_options.index) || 0;
+            var password = new_options.password;
 
-            if (secret) {
+            if (secret && password) {
                 var key = undefined;
                 var seed = Seed.from_json(secret);
                 if (seed.is_valid()) {
@@ -1051,7 +1062,13 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
                 }
                 if (!key || !(key.is_valid())) return;
                 options.secret = secret;
-                options.secretqr = btoa(secret);
+                $scope.encryptsecret = btoa(sjcl.encrypt("" + password.length + '|' + password,
+                    secret, {
+                        ks: 256,
+                        iter: 1000
+                    }
+                ));
+                console.log($scope.encryptsecret);
                 options.index = index;
                 options.address = key.to_address_string();
             }

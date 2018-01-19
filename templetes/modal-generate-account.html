@@ -6,20 +6,19 @@
     <form name="generateAccountForm" nonvalidate>
         <table>
             <tr>
-                <td>{{'Secret'|translate}}</td>
+                <td>{{'Secret'|translate}}:</td>
                 <td><input id="keyinput" type="password" name="secret" placeholder="{{'Enter_Secret'|translate}}" class="form-control" size=50 ng-model="options.secret" ripple-valid-secret required autofocus></td>
-
-            </tr>
-            <br>
-            <tr>
-                <td></td>
                 <td><span style="color:red" ng-show="generateAccountForm.secret.$dirty && generateAccountForm.secret.$error.rippleValidSecret">{{'Invalid'|translate}}</span></td>
-
-
             </tr>
             <tr>
-                <td>{{'SELQR'|translate}}</td>
-                <td><input ng-model="photo" onchange="angular.element(this).scope().file_changed(this);" type="file" accept="image/*" /><button type="button" class="btn btn-info" ng-click="options.secret = qrSecret(); options.index = 0;">{{'RDQR'|translate}}</button></td>
+                <td>{{'Password'|translate}}:</td>
+                <td><input type="password" name="password" placeholder="{{'Enter_password'|translate}}" class="form-control" size=50 ng-model="options.password" required autofocus></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td> {{'Import_encryptsecretfile'|translate}}:</td>
+                <td><input type="file" onchange="angular.element(this).scope().encryptsecretImport(this)"></td>
+                <td><button type="button" class="btn btn-info" ng-click="options.secret = DecodeSecret(options); options.index = 0;">{{'DecodeSecret'|translate}}</button></td>
             </tr>
         </table>
     </form><br>

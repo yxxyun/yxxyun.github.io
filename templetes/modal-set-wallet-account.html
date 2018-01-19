@@ -23,14 +23,10 @@
                 <td><span style="color:red" ng-show="setWalletAccountForm.address.$dirty && setWalletAccountForm.address.$error.rippleValidAddress">{{'Invalid'|translate}}</span>
                 </td>
                 <td></td>
-
-
             </tr>
-            <tr ng-show="options.secret">
-                <td>{{'Save_secret'|translate}}:</td>
-                <td>
-                    <qrcode version="5" error-correction-level="M" size="160" data="{{options.secretqr}}" download></qrcode>
-                </td>
+            <tr>
+                <td>{{'encryptsecret'|translate}}:</td>
+                <td><button type="button" ng-click="encryptsecretBlobSave()">{{'Save_to_File'|translate}}</button></td>
                 <td></td>
             </tr>
         </table>
