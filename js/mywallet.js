@@ -1131,6 +1131,7 @@ walletApp.controller('walletCtrl', ['$translate', '$scope', '$http', '$uibModal'
             animation: false,
             templateUrl: 'templetes/modal-set-wallet-secret.html',
             controller: 'ModalCtrl',
+            scope: $scope,
             resolve: {
                 options: function() {
                     return options;
