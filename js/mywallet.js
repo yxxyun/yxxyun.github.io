@@ -230,26 +230,14 @@ var GATEWAYS = [{
         name: "RippleChina",
         address: "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA",
         currencies: ['CNY']
-    }, {
-        name: "RippleCN",
-        address: "rnuF96W4SZoCJmbHYBFoJZpR8eCaxNvekK",
-        currencies: ['CNY', 'BTC']
-    }, {
+    },  {
         name: "RippleFox",
         address: "rKiCet8SdvWxPXnAgYarFUXMh1zCPz432Y",
-        currencies: ['CNY', 'FMM', 'XLM']
+        currencies: ['CNY', 'ULT', 'XLM']
     }, {
         name: "Gatehub",
         address: "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
         currencies: ['EUR', 'USD']
-    }, {
-        name: "Rippex",
-        address: "rfNZPxoZ5Uaamdp339U9dCLWz2T73nZJZH",
-        currencies: ['BRL']
-    }, {
-        name: "MrRipple",
-        address: "rB3gZey7VWHYRqJHLoHDEJXJ2pEPNieKiS",
-        currencies: ['JPY', 'USD', 'BTC', 'BCC', 'LTC', 'DOG', 'STR', 'RJP', 'ETH', 'ETC', 'ADA', 'REP']
     }, {
         name: "GatehubFifthBTC",
         address: "rchGBxcD1A1C2tdxF6papQYZ8kjRKMYcL",
@@ -285,12 +273,7 @@ var GATEWAYS = [{
         address: "r3ttJ41YnMrKiLqGUXJpQE8urqyMGjC8vE",
         currencies: ['QAU']
     },
-    {
-        name: "RippexBridge",
-        address: "rKxKhXZCeSDsbkyB8DVgxpjy5AHubFkMFe",
-        currencies: ['BTC']
-    },
-
+    
 ];
 
 var TRADE_PAIRS = [
